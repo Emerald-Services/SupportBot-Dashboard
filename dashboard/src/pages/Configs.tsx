@@ -107,85 +107,15 @@ export default function Configs() {
         </p>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[220px_1fr]">
-        <Card className="h-fit border-border bg-card">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Configuration files
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <ScrollArea className="h-[min(400px,50vh)]">
-              <ul className="space-y-3 p-2">
-                {allowedMainFiles.length > 0 ? (
-                  <li>
-                    <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/80">
-                      Core
-                    </p>
-                    <ul className="space-y-0.5">
-                      {allowedMainFiles.map((file) => (
-                        <li key={file}>
-                          <button
-                            type="button"
-                            onClick={() => selectFile(file)}
-                            className={cn(
-                              "w-full rounded-lg px-3 py-2.5 text-left text-sm transition-colors",
-                              file === active
-                                ? "bg-primary/15 font-medium text-primary"
-                                : "text-muted-foreground hover:bg-secondary hover:text-foreground",
-                            )}
-                          >
-                            {file}.yml
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </li>
-                ) : null}
-
-                {allowedAddonFiles.length > 0 ? (
-                  <li>
-                    <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/80">
-                      Addons
-                    </p>
-                    <ul className="space-y-0.5">
-                      {allowedAddonFiles.map((file) => {
-                        const key = addonConfigFileParam(file);
-                        return (
-                          <li key={file}>
-                            <button
-                              type="button"
-                              onClick={() => selectFile(key)}
-                              className={cn(
-                                "w-full rounded-lg px-3 py-2.5 text-left text-sm transition-colors",
-                                key === active
-                                  ? "bg-primary/15 font-medium text-primary"
-                                  : "text-muted-foreground hover:bg-secondary hover:text-foreground",
-                              )}
-                            >
-                              {file}
-                            </button>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </li>
-                ) : null}
-              </ul>
-            </ScrollArea>
-          </CardContent>
-        </Card>
-
-        <div className="min-w-0">
-          {isAddonActive && activeAddonFilename ? (
-            <AddonConfigEditor
-              key={activeAddonFilename}
-              filename={activeAddonFilename}
-            />
-          ) : (
-            <ConfigVisualEditor key={active} configFile={active} />
-          )}
-        </div>
+      <div className="mt-6">
+        {isAddonActive && activeAddonFilename ? (
+          <AddonConfigEditor
+            key={activeAddonFilename}
+            filename={activeAddonFilename}
+          />
+        ) : (
+          <ConfigVisualEditor key={active} configFile={active} />
+        )}
       </div>
     </div>
   );

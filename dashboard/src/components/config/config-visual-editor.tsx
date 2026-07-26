@@ -18,6 +18,7 @@ import { mergeSchemaWithData } from "@/lib/merge-config-schema";
 import { useAuth } from "@/context/AuthContext";
 import { notifyConfigSave } from "@/lib/notify-config-save";
 import { Textarea } from "@/components/ui/textarea";
+import Editor from "@monaco-editor/react";
 import { ConfigFieldInput } from "./config-field";
 import { CommandsEditor } from "./commands-editor";
 
@@ -295,13 +296,22 @@ export function ConfigVisualEditor({ configFile }: ConfigVisualEditorProps) {
               or any option not in Visual mode.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <Textarea
+          <CardContent className="h-[min(520px,60vh)] overflow-hidden rounded-b-xl border-t border-border p-0">
+            <Editor
+              height="100%"
+              language="yaml"
+              theme="vs-dark"
               value={rawYaml}
-              disabled={readOnly}
-              onChange={(e) => setRawYaml(e.target.value)}
-              className="min-h-[min(520px,60vh)] font-mono text-xs leading-relaxed"
-              spellCheck={false}
+              onChange={(value) => setRawYaml(value || "")}
+              options={{
+                readOnly: readOnly,
+                minimap: { enabled: false },
+                fontSize: 13,
+                wordWrap: "on",
+                scrollBeyondLastLine: false,
+                padding: { top: 16 },
+                tabSize: 2,
+              }}
             />
           </CardContent>
         </Card>

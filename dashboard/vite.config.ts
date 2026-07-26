@@ -11,7 +11,7 @@ export default defineConfig({
   },
   base: "/",
   build: {
-    outDir: path.resolve(__dirname, "../public/dashboard"),
+    outDir: path.resolve(__dirname, "../../SupportBot/public/dashboard"),
     emptyOutDir: true,
   },
   server: {

@@ -54,56 +54,41 @@ const mainNav: {
   permission?: string;
 }[] = [
   { title: "Dashboard", url: "/", icon: DashboardSquare02Icon, end: true, permission: "overview" },
-  { title: "Logs", url: "/logs", icon: ComputerTerminal01Icon, permission: "logs" },
-  { title: "Settings", url: "/settings", icon: Settings02Icon, permission: "settings.view" },
-  { title: "Addons", url: "/addons", icon: PackageIcon, permission: "settings.view" },
-  { title: "Users", url: "/users", icon: UserMultiple02Icon, permission: "users.view" },
 ];
 
 const sections: {
   label: string;
-  items: { title: string; url: string; icon: IconSvgElement }[];
+  items: { title: string; url: string; icon: IconSvgElement; permission?: string }[];
 }[] = [
   {
-    label: "Tickets & support",
+    label: "Configuration",
     items: [
-      {
-        title: "Ticket system",
-        url: "/configs?file=ticket-panel",
-        icon: Ticket01Icon,
-      },
-      {
-        title: "Bot config",
-        url: "/configs?file=supportbot",
-        icon: BotIcon,
-      },
-      { title: "Transcripts", url: "/transcripts", icon: File02Icon },
+      { title: "Bot Settings", url: "/configs?file=supportbot", icon: BotIcon },
+      { title: "Commands", url: "/configs?file=commands", icon: CommandIcon },
+      { title: "Messages", url: "/configs?file=messages", icon: Message01Icon },
     ],
   },
   {
-    label: "Community",
+    label: "Features",
     items: [
-      {
-        title: "Messages",
-        url: "/configs?file=messages",
-        icon: Message01Icon,
-      },
-      {
-        title: "AI assistant",
-        url: "/configs?file=supportbot-ai",
-        icon: AiBrain01Icon,
-      },
+      { title: "Ticket System", url: "/configs?file=ticket-panel", icon: Ticket01Icon },
+      { title: "AI Assistant", url: "/configs?file=supportbot-ai", icon: AiBrain01Icon },
+      { title: "Transcripts", url: "/transcripts", icon: File02Icon, permission: "transcripts" },
     ],
   },
   {
-    label: "Server control",
+    label: "Management",
     items: [
-      { title: "commands.yml", url: "/configs?file=commands", icon: CommandIcon },
-      {
-        title: "Staff roles",
-        url: "/configs?file=supportbot",
-        icon: UserMultiple02Icon,
-      },
+      { title: "Users", url: "/users", icon: UserMultiple02Icon, permission: "users.view" },
+      { title: "Staff Roles", url: "/configs?file=supportbot", icon: UserMultiple02Icon },
+      { title: "Console Logs", url: "/logs", icon: ComputerTerminal01Icon, permission: "logs" },
+    ],
+  },
+  {
+    label: "System",
+    items: [
+      { title: "Addon Manager", url: "/addons", icon: PackageIcon, permission: "settings.view" },
+      { title: "Dashboard Settings", url: "/settings", icon: Settings02Icon, permission: "settings.view" },
     ],
   },
 ];
@@ -140,15 +125,12 @@ export function AppSidebar() {
     .map((section) => ({
       ...section,
       items: section.items.filter((item) => {
+        if (item.permission) {
+          return hasPermission(permissions, item.permission);
+        }
         const file = configFileFromUrl(item.url);
         if (file && item.url.includes("/configs")) {
           return canViewConfig(permissions, file);
-        }
-        if (item.url === "/transcripts") {
-          return hasPermission(permissions, "transcripts");
-        }
-        if (item.url === "/commands") {
-          return canViewConfig(permissions, "commands");
         }
         return true;
       }),
@@ -236,7 +218,7 @@ export function AppSidebar() {
               <SidebarMenu>
                 {section.items.map((item) => {
                   const file = configFileFromUrl(item.url);
-                  const isActive =
+                  const isConfigActive =
                     Boolean(file) &&
                     activeFile === file &&
                     item.url.includes("/configs");
@@ -245,8 +227,8 @@ export function AppSidebar() {
                       <SidebarMenuButton asChild tooltip={item.title}>
                         <NavLink
                           to={item.url}
-                          className={cn(
-                            isActive && "bg-sidebar-accent font-medium",
+                          className={({ isActive }) => cn(
+                            (isActive || isConfigActive) && "bg-sidebar-accent font-medium",
                           )}
                         >
                           <Icon icon={item.icon} size={18} />
