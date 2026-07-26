@@ -19,7 +19,7 @@ const CONFIG_FILES = api.listConfigs();
 
 const FILE_TITLES: Record<(typeof CONFIG_FILES)[number], string> = {
   supportbot: "Bot config",
-  "ticket-panel": "Ticket system",
+  "ticket-panel": "Ticket panel",
   commands: "Commands",
   messages: "Messages",
   "supportbot-ai": "AI assistant",

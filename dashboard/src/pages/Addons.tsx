@@ -83,14 +83,14 @@ export default function Addons() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Addons</h1>
           <p className="text-muted-foreground">
-            Install community addons from{" "}
+            Install addons from the{" "}
             <a
-              href={repository || "https://github.com/Emerald-Services/Addons"}
+              href={repository || "https://emeraldsrv.dev"}
               target="_blank"
               rel="noreferrer"
               className="text-primary underline-offset-4 hover:underline"
             >
-              Emerald-Services/Addons
+              Emerald Services Marketplace
             </a>
             . Enable addons under{" "}
             <Link
@@ -148,22 +148,25 @@ export default function Addons() {
                       />
                       {addon.name}
                     </CardTitle>
-                    {addon.installed ? (
-                      <Badge variant="secondary" className="shrink-0 gap-1">
-                        <Icon icon={Tick02Icon} size={14} />
-                        Installed
+                    <div className="flex gap-2">
+                      <Badge variant="outline" className="shrink-0 uppercase tracking-widest text-[10px]">
+                        {addon.price === 0 || !addon.price ? "Free" : `$${addon.price}`}
                       </Badge>
-                    ) : null}
+                      {addon.installed ? (
+                        <Badge variant="secondary" className="shrink-0 gap-1">
+                          <Icon icon={Tick02Icon} size={14} />
+                          Installed
+                        </Badge>
+                      ) : null}
+                    </div>
                   </div>
                   <CardDescription>{addon.description}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-2 text-xs text-muted-foreground">
-                  <p>
-                    {addon.jsFiles.length} command file
-                    {addon.jsFiles.length === 1 ? "" : "s"}:{" "}
-                    <span className="font-mono">{addon.jsFiles.join(", ")}</span>
-                  </p>
-                  {addon.configFiles.length > 0 ? (
+                  {addon.is_external ? (
+                    <p>Available on: <span className="font-medium text-foreground">{addon.external_store || "External Store"}</span></p>
+                  ) : null}
+                  {addon.configFiles && addon.configFiles.length > 0 ? (
                     <p>
                       Config:{" "}
                       {addon.configFiles.map((file, i) => (
@@ -181,16 +184,18 @@ export default function Addons() {
                   ) : null}
                 </CardContent>
                 <CardFooter className="flex flex-wrap gap-2">
-                  <Button variant="outline" size="sm" asChild>
-                    <a
-                      href={addon.repositoryUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      View on GitHub
-                    </a>
-                  </Button>
-                  {addon.installed && addon.configFiles[0] ? (
+                  {addon.is_external ? (
+                    <Button variant="outline" size="sm" asChild>
+                      <a
+                        href={addon.repositoryUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        View Store
+                      </a>
+                    </Button>
+                  ) : null}
+                  {addon.installed && addon.configFiles && addon.configFiles[0] ? (
                     <Button size="sm" variant="secondary" asChild>
                       <Link
                         to={`/configs?file=${addonConfigFileParam(addon.configFiles[0])}`}
@@ -203,7 +208,7 @@ export default function Addons() {
                     <Button size="sm" disabled variant="secondary">
                       Installed
                     </Button>
-                  ) : (
+                  ) : !addon.is_external ? (
                     <Button
                       size="sm"
                       disabled={!canInstall || installing === addon.id}
@@ -212,7 +217,7 @@ export default function Addons() {
                       <Icon icon={Download04Icon} size={14} className="mr-1" />
                       {installing === addon.id ? "Installing…" : "Install"}
                     </Button>
-                  )}
+                  ) : null}
                 </CardFooter>
               </Card>
             ))}

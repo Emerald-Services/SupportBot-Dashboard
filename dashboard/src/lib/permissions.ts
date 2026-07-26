@@ -67,7 +67,7 @@ export const ROLE_HINTS: Record<DashboardRole, string> = {
 
 export const CONFIG_FILE_LABELS: Record<ConfigFile, string> = {
   supportbot: "Bot config",
-  "ticket-panel": "Ticket system",
+  "ticket-panel": "Ticket panel",
   commands: "Commands",
   messages: "Messages",
   "supportbot-ai": "AI assistant",

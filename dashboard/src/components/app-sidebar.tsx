@@ -52,42 +52,42 @@ const mainNav: {
   icon: IconSvgElement;
   end?: boolean;
   permission?: string;
-}[] = [
-  { title: "Dashboard", url: "/", icon: DashboardSquare02Icon, end: true, permission: "overview" },
-];
+}[] = [];
 
 const sections: {
   label: string;
-  items: { title: string; url: string; icon: IconSvgElement; permission?: string }[];
+  items: { title: string; url: string; icon: IconSvgElement; permission?: string; end?: boolean }[];
 }[] = [
+  {
+    label: "Overview",
+    items: [
+      { title: "Dashboard", url: "/", icon: DashboardSquare02Icon, end: true, permission: "overview" },
+      { title: "Console", url: "/logs", icon: ComputerTerminal01Icon, permission: "logs" },
+    ],
+  },
   {
     label: "Configuration",
     items: [
       { title: "Bot Settings", url: "/configs?file=supportbot", icon: BotIcon },
-      { title: "Commands", url: "/configs?file=commands", icon: CommandIcon },
-      { title: "Messages", url: "/configs?file=messages", icon: Message01Icon },
-    ],
-  },
-  {
-    label: "Features",
-    items: [
-      { title: "Ticket System", url: "/configs?file=ticket-panel", icon: Ticket01Icon },
+      { title: "Ticket Panel", url: "/configs?file=ticket-panel", icon: Ticket01Icon },
       { title: "AI Assistant", url: "/configs?file=supportbot-ai", icon: AiBrain01Icon },
-      { title: "Transcripts", url: "/transcripts", icon: File02Icon, permission: "transcripts" },
+      { title: "Messages", url: "/configs?file=messages", icon: Message01Icon },
+      { title: "Commands", url: "/configs?file=commands", icon: CommandIcon },
     ],
   },
   {
-    label: "Management",
+    label: "Access & Logs",
     items: [
       { title: "Users", url: "/users", icon: UserMultiple02Icon, permission: "users.view" },
       { title: "Staff Roles", url: "/configs?file=supportbot", icon: UserMultiple02Icon },
-      { title: "Console Logs", url: "/logs", icon: ComputerTerminal01Icon, permission: "logs" },
+      { title: "Transcripts", url: "/transcripts", icon: File02Icon, permission: "transcripts" },
     ],
   },
   {
     label: "System",
     items: [
-      { title: "Addon Manager", url: "/addons", icon: PackageIcon, permission: "settings.view" },
+      { title: "Addons", url: "/addons", icon: PackageIcon, permission: "settings.view" },
+      { title: "Addon Builder", url: "/addons/builder", icon: CommandIcon, permission: "settings.update" },
       { title: "Dashboard Settings", url: "/settings", icon: Settings02Icon, permission: "settings.view" },
     ],
   },
@@ -113,6 +113,7 @@ export function AppSidebar() {
             title: addonConfigLabel(filename),
             url: `/configs?file=${addonConfigFileParam(filename)}`,
             icon: PackageIcon,
+            end: false,
           })),
         }
       : null;
@@ -227,6 +228,7 @@ export function AppSidebar() {
                       <SidebarMenuButton asChild tooltip={item.title}>
                         <NavLink
                           to={item.url}
+                          end={item.end}
                           className={({ isActive }) => cn(
                             (isActive || isConfigActive) && "bg-sidebar-accent font-medium",
                           )}

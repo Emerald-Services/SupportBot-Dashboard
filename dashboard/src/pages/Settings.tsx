@@ -28,11 +28,12 @@ import {
 } from "@/lib/accent-theme";
 import { normalizeHex } from "@/lib/normalize-hex";
 import { DashboardBrandingSettings } from "@/components/settings/dashboard-branding-settings";
+import { DashboardApiSettings } from "@/components/settings/dashboard-api-settings";
 
 export default function Settings() {
   const { hasPermission } = useAuth();
   const canUpdate = hasPermission("settings.update");
-  const [check, setCheck] = useState<UpdateCheckResult | null>(null);
+  const [checks, setChecks] = useState<UpdateCheckResult[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState("");
@@ -47,7 +48,7 @@ export default function Settings() {
     setError("");
     try {
       const res = await api.checkForUpdates();
-      if (res.data) setCheck(res.data);
+      if (res.data) setChecks(res.data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not check for updates");
     } finally {
@@ -59,13 +60,13 @@ export default function Settings() {
     loadCheck();
   }, [loadCheck]);
 
-  async function handleUpdate() {
-    if (!check?.updateAvailable) return;
+  async function handleUpdate(check: UpdateCheckResult) {
+    if (!check.updateAvailable) return;
     setUpdating(true);
     setError("");
     setNotice("");
     try {
-      const res = await api.runUpdate(check.latest);
+      const res = await api.runUpdate(check.id, check.latest, check.zipUrl);
       setNotice(
         res.message ||
           "Update installed. Restart your server (stop and run npm start again) to finish applying changes.",
@@ -164,42 +165,86 @@ export default function Settings() {
 
       <Card className="border-border bg-card">
         <CardHeader>
+          <CardTitle className="text-lg">API Configuration</CardTitle>
+          <CardDescription>
+            Configure the internal API settings, Emerald API key, and OAuth.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <DashboardApiSettings />
+        </CardContent>
+      </Card>
+
+      <Card className="border-border bg-card">
+        <CardHeader>
           <CardTitle className="text-lg">Software updates</CardTitle>
           <CardDescription>
-            Checks{" "}
-            <a
-              href="https://github.com/C-h-a-r/SupportBot-Dashboard"
-              target="_blank"
-              rel="noreferrer"
-              className="text-primary underline-offset-4 hover:underline"
-            >
-              SupportBot-Dashboard
-            </a>{" "}
-            on the release branch.
+            Manage updates for the bot and dashboard.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {loading ? (
             <Skeleton className="h-24 w-full" />
-          ) : check ? (
-            <div className="space-y-3 rounded-lg border border-border bg-secondary/20 p-4">
-              <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
-                <p>
-                  <span className="text-muted-foreground">Installed: </span>
-                  <span className="font-mono font-medium">v{check.current}</span>
-                </p>
-                <p>
-                  <span className="text-muted-foreground">Latest: </span>
-                  <span className="font-mono font-medium">v{check.latest}</span>
-                </p>
-              </div>
-              {check.updateAvailable ? (
-                <p className="text-sm text-amber-500">
-                  A newer version is available. Update downloads bot files while keeping your Configs and Data.
-                </p>
-              ) : (
-                <p className="text-sm text-emerald-500">You are on the latest release.</p>
-              )}
+          ) : checks && checks.length > 0 ? (
+            <div className="space-y-4">
+              {checks.map((check) => (
+                <div key={check.id} className="space-y-3 rounded-lg border border-border bg-secondary/20 p-4">
+                  <div className="flex items-center justify-between">
+                    <p className="font-medium text-sm">
+                      <a
+                        href={check.repository}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-primary underline-offset-4 hover:underline"
+                      >
+                        {check.name}
+                      </a>{" "}
+                      ({check.branch} branch)
+                    </p>
+                    <div className="flex gap-x-4 text-sm">
+                      <p>
+                        <span className="text-muted-foreground">Installed: </span>
+                        <span className="font-mono font-medium">v{check.current}</span>
+                      </p>
+                      <p>
+                        <span className="text-muted-foreground">Latest: </span>
+                        <span className="font-mono font-medium">v{check.latest}</span>
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    {check.updateAvailable ? (
+                      <p className="text-sm text-amber-500">
+                        A newer version is available. Update downloads files while keeping your Configs and Data.
+                      </p>
+                    ) : (
+                      <p className="text-sm text-emerald-500">You are on the latest release.</p>
+                    )}
+
+                    {check.updateAvailable && canUpdate ? (
+                      <Button type="button" size="sm" onClick={() => void handleUpdate(check)} disabled={updating}>
+                        {updating ? (
+                          <Icon
+                            icon={Loading03Icon}
+                            size={16}
+                            className="mr-2 animate-spin"
+                          />
+                        ) : (
+                          <Icon icon={Download04Icon} size={16} className="mr-2" />
+                        )}
+                        {updating ? "Installing…" : "Update now"}
+                      </Button>
+                    ) : null}
+                    
+                    {check.updateAvailable && !canUpdate ? (
+                      <p className="text-xs text-muted-foreground">
+                        You cannot install updates with your role.
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+              ))}
             </div>
           ) : null}
 
@@ -215,7 +260,7 @@ export default function Settings() {
             </Alert>
           ) : null}
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 pt-2">
             <Button
               type="button"
               variant="outline"
@@ -225,25 +270,6 @@ export default function Settings() {
               <Icon icon={RefreshIcon} size={16} className="mr-2" />
               Check again
             </Button>
-            {check?.updateAvailable && canUpdate ? (
-              <Button type="button" onClick={handleUpdate} disabled={updating}>
-                {updating ? (
-                  <Icon
-                    icon={Loading03Icon}
-                    size={16}
-                    className="mr-2 animate-spin"
-                  />
-                ) : (
-                  <Icon icon={Download04Icon} size={16} className="mr-2" />
-                )}
-                {updating ? "Installing…" : "Update now"}
-              </Button>
-            ) : null}
-            {check?.updateAvailable && !canUpdate ? (
-              <p className="text-xs text-muted-foreground">
-                You can check for updates but cannot install them with your role.
-              </p>
-            ) : null}
           </div>
         </CardContent>
       </Card>

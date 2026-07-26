@@ -85,15 +85,21 @@ export interface ApiResponse<T> {
 export interface CatalogAddon {
   id: string;
   name: string;
+  slug?: string;
   description: string;
   repositoryUrl: string;
+  price?: number;
+  is_external?: number;
+  external_store?: string;
   jsFiles: string[];
   configFiles: string[];
-  fileCount: number;
+  fileCount?: number;
   installed?: boolean;
 }
 
 export interface UpdateCheckResult {
+  id: string;
+  name: string;
   current: string;
   latest: string;
   updateAvailable: boolean;
@@ -269,12 +275,12 @@ export const api = {
     }),
 
   checkForUpdates: () =>
-    request<ApiResponse<UpdateCheckResult>>("/api/system/update-check"),
+    request<ApiResponse<UpdateCheckResult[]>>("/api/system/update-check"),
 
-  runUpdate: (version: string) =>
+  runUpdate: (repoId: string, version: string, url: string) =>
     request<ApiResponse<unknown>>("/api/system/update", {
       method: "POST",
-      body: JSON.stringify({ version }),
+      body: JSON.stringify({ repoId, version, url }),
     }),
 
   reloadConfigs: (file?: string) =>
@@ -545,6 +551,12 @@ export const api = {
     request<ApiResponse<unknown>>("/api/addons/configs", {
       method: "PUT",
       body: JSON.stringify({ filename, data }),
+    }),
+
+  buildAddon: (payload: { name: string; description: string; permission: string; embed: any }) =>
+    request<ApiResponse<{ success: boolean }>>("/api/addons/build", {
+      method: "POST",
+      body: JSON.stringify(payload),
     }),
 
   getSetupStatus: () =>

@@ -105,61 +105,80 @@ export function DashboardBrandingSettings({ canEdit }: DashboardBrandingSettings
     title.trim() !== branding.title || pageTitle.trim() !== branding.pageTitle;
 
   return (
-    <div className="space-y-4 border-t border-border pt-4">
-      <div>
-        <p className="text-sm font-medium">Branding</p>
-        <p className="text-xs text-muted-foreground">
-          Sidebar title, browser tab title, and favicon — saved on the server for
-          everyone using this dashboard.
-        </p>
+    <div className="space-y-8">
+      {/* Text Branding */}
+      <div className="space-y-4">
+        <div>
+          <p className="text-sm font-medium">Branding Text</p>
+          <p className="text-xs text-muted-foreground">
+            Sidebar title and browser tab title — saved on the server for everyone using this dashboard.
+          </p>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="brand-title">Sidebar title</Label>
+            <Input
+              id="brand-title"
+              value={title}
+              disabled={!canEdit}
+              maxLength={64}
+              onChange={(e) => setTitle(e.target.value)}
+              className="border-border bg-secondary/30"
+              placeholder="SupportBot"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="brand-page-title">Browser tab title</Label>
+            <Input
+              id="brand-page-title"
+              value={pageTitle}
+              disabled={!canEdit}
+              maxLength={80}
+              onChange={(e) => setPageTitle(e.target.value)}
+              className="border-border bg-secondary/30"
+              placeholder="SupportBot Dashboard"
+            />
+          </div>
+        </div>
+
+        {canEdit ? (
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              disabled={saving || !textDirty}
+              onClick={() => void saveText()}
+            >
+              {saving ? "Saving…" : "Save titles"}
+            </Button>
+            {message && textDirty ? (
+              <span className="text-xs text-muted-foreground">{message}</span>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="brand-title">Sidebar title</Label>
-          <Input
-            id="brand-title"
-            value={title}
-            disabled={!canEdit}
-            maxLength={64}
-            onChange={(e) => setTitle(e.target.value)}
-            className="border-border bg-secondary/30"
-            placeholder="SupportBot"
-          />
+      {/* Favicon Branding */}
+      <div className="space-y-4 border-t border-border pt-6">
+        <div>
+          <p className="text-sm font-medium">Favicon</p>
+          <p className="text-xs text-muted-foreground">
+            PNG, ICO, SVG, JPEG, or WebP — max 512 KB. Shown in the browser tab and beside the sidebar title.
+          </p>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="brand-page-title">Browser tab title</Label>
-          <Input
-            id="brand-page-title"
-            value={pageTitle}
-            disabled={!canEdit}
-            maxLength={80}
-            onChange={(e) => setPageTitle(e.target.value)}
-            className="border-border bg-secondary/30"
-            placeholder="SupportBot Dashboard"
-          />
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label>Favicon</Label>
-        <p className="text-xs text-muted-foreground">
-          PNG, ICO, SVG, JPEG, or WebP — max 512 KB. Shown in the browser tab and
-          beside the sidebar title.
-        </p>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex size-14 items-center justify-center overflow-hidden rounded-lg border border-border bg-secondary/30">
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex size-16 items-center justify-center overflow-hidden rounded-lg border border-border bg-secondary/30">
             {faviconPreview ? (
               <img
                 src={faviconPreview}
                 alt="Favicon preview"
-                className="size-full object-contain p-1"
+                className="size-full object-contain p-2"
               />
             ) : (
               <Icon
                 icon={ImageUpload01Icon}
-                size={22}
-                className="text-muted-foreground"
+                size={24}
+                className="text-muted-foreground/50"
               />
             )}
           </div>
@@ -171,59 +190,56 @@ export function DashboardBrandingSettings({ canEdit }: DashboardBrandingSettings
             disabled={!canEdit || uploading}
             onChange={(e) => void onFaviconSelected(e.target.files?.[0] ?? null)}
           />
-          {canEdit ? (
-            <>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={uploading}
-                onClick={() => fileRef.current?.click()}
-              >
-                {uploading ? "Uploading…" : "Upload favicon"}
-              </Button>
-              {branding.hasFavicon ? (
+          <div className="flex flex-col gap-2">
+            {canEdit ? (
+              <div className="flex gap-2">
                 <Button
                   type="button"
-                  variant="outline"
-                  size="sm"
+                  variant="secondary"
                   disabled={uploading}
-                  onClick={() => void removeFavicon()}
+                  onClick={() => fileRef.current?.click()}
                 >
-                  Remove
+                  {uploading ? "Uploading…" : "Upload Favicon"}
                 </Button>
-              ) : null}
-            </>
-          ) : (
-            <span className="text-xs text-muted-foreground">View only</span>
-          )}
+                {branding.hasFavicon ? (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    disabled={uploading}
+                    onClick={() => void removeFavicon()}
+                  >
+                    Remove
+                  </Button>
+                ) : null}
+              </div>
+            ) : (
+              <span className="text-xs text-muted-foreground">View only</span>
+            )}
+            {!textDirty && message ? (
+              <span className="text-xs text-muted-foreground">{message}</span>
+            ) : null}
+          </div>
         </div>
       </div>
 
+      {/* Danger Zone */}
       {canEdit ? (
-        <div className="flex flex-wrap gap-2">
+        <div className="space-y-4 border-t border-border pt-6">
+          <div>
+            <p className="text-sm font-medium">Danger Zone</p>
+            <p className="text-xs text-muted-foreground">
+              Reset all branding text and favicon to their original defaults.
+            </p>
+          </div>
           <Button
             type="button"
-            size="sm"
-            disabled={saving || !textDirty}
-            onClick={() => void saveText()}
-          >
-            {saving ? "Saving…" : "Save titles"}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
+            variant="destructive"
             disabled={saving || uploading}
             onClick={() => void resetAll()}
           >
-            Reset branding
+            Reset Branding to Default
           </Button>
         </div>
-      ) : null}
-
-      {message ? (
-        <p className="text-xs text-muted-foreground">{message}</p>
       ) : null}
     </div>
   );

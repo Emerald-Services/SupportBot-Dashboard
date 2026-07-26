@@ -75,6 +75,18 @@ export function DashboardSearch({ className }: { className?: string }) {
     return () => document.removeEventListener("mousedown", onPointerDown);
   }, []);
 
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        inputRef.current?.focus();
+        setOpen(true);
+      }
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, []);
+
   function selectItem(item: SearchItem) {
     navigate(item.href);
     setQuery("");
@@ -111,6 +123,9 @@ export function DashboardSearch({ className }: { className?: string }) {
         aria-controls="dashboard-search-results"
         aria-autocomplete="list"
       />
+      <kbd className="pointer-events-none absolute right-2 top-2 hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100 sm:flex">
+        <span className="text-xs">⌘</span>K
+      </kbd>
 
       {showPanel && panelRect
         ? createPortal(

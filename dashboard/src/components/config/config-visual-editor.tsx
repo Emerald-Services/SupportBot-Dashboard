@@ -17,6 +17,7 @@ import { getByPath, setByPath } from "@/lib/config-utils";
 import { mergeSchemaWithData } from "@/lib/merge-config-schema";
 import { useAuth } from "@/context/AuthContext";
 import { notifyConfigSave } from "@/lib/notify-config-save";
+import { cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
 import Editor from "@monaco-editor/react";
 import { ConfigFieldInput } from "./config-field";
@@ -91,6 +92,7 @@ export function ConfigVisualEditor({ configFile }: ConfigVisualEditorProps) {
   const [mode, setMode] = useState<EditorMode>("visual");
   const [rawYaml, setRawYaml] = useState("");
   const [rawOriginal, setRawOriginal] = useState("");
+  const [activeSectionTitle, setActiveSectionTitle] = useState<string | null>(null);
 
   const baseSchema = getSchema(configFile);
 
@@ -98,6 +100,14 @@ export function ConfigVisualEditor({ configFile }: ConfigVisualEditorProps) {
     if (!baseSchema || baseSchema === "commands" || !data) return baseSchema;
     return mergeSchemaWithData(baseSchema, data);
   }, [baseSchema, data]);
+
+  useEffect(() => {
+    if (effectiveSchema && effectiveSchema !== "commands") {
+      if (!activeSectionTitle || !effectiveSchema.find(s => s.title === activeSectionTitle)) {
+        setActiveSectionTitle(effectiveSchema[0]?.title || null);
+      }
+    }
+  }, [effectiveSchema, activeSectionTitle]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -321,35 +331,57 @@ export function ConfigVisualEditor({ configFile }: ConfigVisualEditorProps) {
           onChange={(next) => setData(next)}
         />
       ) : effectiveSchema && effectiveSchema !== "commands" ? (
-        effectiveSchema.map((section) => (
-          <Card key={section.title} className="border-border bg-card">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">{section.title}</CardTitle>
-              {section.description ? (
-                <CardDescription>{section.description}</CardDescription>
-              ) : null}
-            </CardHeader>
-            <CardContent className="grid gap-4 sm:grid-cols-2">
-              {section.fields.map((field) => (
-                <div
-                  key={field.path}
-                  className={
-                    field.type === "textarea" || field.type === "stringList"
-                      ? "sm:col-span-2"
-                      : ""
-                  }
-                >
-                  <ConfigFieldInput
-                    field={field}
-                    value={getByPath(data, field.path)}
-                    readOnly={readOnly}
-                    onChange={(v) => patch(field.path, v)}
-                  />
-                </div>
+        <div className="grid gap-6 lg:grid-cols-[200px_1fr]">
+          <nav className="flex flex-col gap-1">
+            {effectiveSchema.map((section) => (
+              <button
+                key={section.title}
+                onClick={() => setActiveSectionTitle(section.title)}
+                className={cn(
+                  "text-left px-3 py-2 text-sm rounded-md transition-colors",
+                  activeSectionTitle === section.title
+                    ? "bg-primary text-primary-foreground font-medium"
+                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                )}
+              >
+                {section.title}
+              </button>
+            ))}
+          </nav>
+          <div className="min-w-0">
+            {effectiveSchema
+              .filter((section) => section.title === activeSectionTitle)
+              .map((section) => (
+                <Card key={section.title} className="border-border bg-card">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">{section.title}</CardTitle>
+                    {section.description ? (
+                      <CardDescription>{section.description}</CardDescription>
+                    ) : null}
+                  </CardHeader>
+                  <CardContent className="grid gap-4 sm:grid-cols-2">
+                    {section.fields.map((field) => (
+                      <div
+                        key={field.path}
+                        className={
+                          field.type === "textarea" || field.type === "stringList"
+                            ? "sm:col-span-2"
+                            : ""
+                        }
+                      >
+                        <ConfigFieldInput
+                          field={field}
+                          value={getByPath(data, field.path)}
+                          readOnly={readOnly}
+                          onChange={(v) => patch(field.path, v)}
+                        />
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
               ))}
-            </CardContent>
-          </Card>
-        ))
+          </div>
+        </div>
       ) : null}
     </div>
   );

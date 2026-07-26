@@ -26,7 +26,7 @@ export interface PluginModule {
 export const plugins: PluginModule[] = [
   {
     id: "tickets",
-    title: "Ticket system",
+    title: "Ticket panel",
     description:
       "Create and manage support tickets with departments, priorities, and AI assistance.",
     icon: Ticket01Icon,

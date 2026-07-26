@@ -7,12 +7,14 @@ import Login from "./pages/Login";
 import Setup from "./pages/Setup";
 import { HomeRedirect } from "./components/home-redirect";
 import { RequirePermission } from "./components/require-permission";
+import Addons from "./pages/Addons";
+import { AddonBuilder } from "@/pages/AddonBuilder";
+import { DashboardSettings } from "@/pages/DashboardSettings";
 import Settings from "./pages/Settings";
 import SystemDetails from "./pages/SystemDetails";
 import Logs from "./pages/Logs";
 import Transcripts from "./pages/Transcripts";
 import Users from "./pages/Users";
-import Addons from "./pages/Addons";
 
 function Protected({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, loading } = useAuth();
@@ -109,6 +111,14 @@ export default function App() {
           element={
             <RequirePermission permission="settings.view">
               <Addons />
+            </RequirePermission>
+          }
+        />
+        <Route
+          path="addons/builder"
+          element={
+            <RequirePermission permission="settings.update">
+              <AddonBuilder />
             </RequirePermission>
           }
         />
