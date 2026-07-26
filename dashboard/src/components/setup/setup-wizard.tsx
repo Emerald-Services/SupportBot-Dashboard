@@ -660,7 +660,7 @@ export function EmeraldApiKeyStep({
   return (
     <div className="flex flex-1 flex-col gap-5">
       <p className="text-sm leading-relaxed text-muted-foreground">
-        An Emerald Services API key is required to use the one-click addon installer in the dashboard. You can get yours from the{" "}
+        An Emerald Services API key is optional, but required to use the one-click addon installer in the dashboard. You can get yours from the{" "}
         <a
           href="https://emeraldsrv.dev"
           target="_blank"
@@ -671,7 +671,7 @@ export function EmeraldApiKeyStep({
         </a>.
       </p>
       <div className="space-y-2">
-        <Label htmlFor="emeraldApiKey">Emerald API key</Label>
+        <Label htmlFor="emeraldApiKey">Emerald API key (Optional)</Label>
         <Input
           id="emeraldApiKey"
           type="password"
@@ -687,10 +687,10 @@ export function EmeraldApiKeyStep({
         <Button
           type="button"
           variant="secondary"
-          disabled={validating || !values.emeraldApiKey}
+          disabled={validating}
           onClick={onValidate}
         >
-          {validating ? "Checking…" : "Save key"}
+          {validating ? "Checking…" : (values.emeraldApiKey ? "Verify key" : "Skip step")}
         </Button>
       </div>
     </div>

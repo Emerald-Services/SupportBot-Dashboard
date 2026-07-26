@@ -585,7 +585,7 @@ export const api = {
     ),
 
   resetDashboard: () =>
-    request<ApiResponse<unknown>>("/api/dashboard/setup/reset", {
+    request<ApiResponse<unknown>>("/api/setup/reset", {
       method: "POST",
     }),
 
