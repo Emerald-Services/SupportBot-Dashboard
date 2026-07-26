@@ -327,6 +327,22 @@ export const api = {
       >
     >("/api/system/transcripts"),
 
+  listOpenTickets: () =>
+    request<
+      ApiResponse<{
+        guildId: string;
+        tickets: {
+          ticket_id: string;
+          user_id: string;
+          subject: string;
+          description: string;
+          department: string;
+          priority: string;
+          created_at: number;
+        }[];
+      }>
+    >("/api/system/tickets/open"),
+
   getTranscript: (id: string) =>
     request<ApiResponse<string>>(`/api/system/transcripts/${id}`),
 

@@ -20,6 +20,46 @@ interface DashboardBrandingSettingsProps {
   canEdit: boolean;
 }
 
+export function DashboardBrandingDangerZone({ canEdit }: DashboardBrandingSettingsProps) {
+  const { setBrandingLocal } = useBranding();
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+
+  async function resetAll() {
+    if (!canEdit) return;
+    setSaving(true);
+    setMessage("");
+    try {
+      const res = await api.resetBranding();
+      if (res.data) setBrandingLocal(res.data);
+      setMessage(res.message || "Reset to defaults.");
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Reset failed");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!canEdit) return null;
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">
+        Reset all branding text and favicon to their original defaults.
+      </p>
+      <Button
+        type="button"
+        variant="destructive"
+        disabled={saving}
+        onClick={() => void resetAll()}
+      >
+        Reset Branding to Default
+      </Button>
+      {message && <p className="text-xs text-muted-foreground">{message}</p>}
+    </div>
+  );
+}
+
 export function DashboardBrandingSettings({ canEdit }: DashboardBrandingSettingsProps) {
   const { branding, setBrandingLocal } = useBranding();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -86,18 +126,10 @@ export function DashboardBrandingSettings({ canEdit }: DashboardBrandingSettings
     }
   }
 
-  async function resetAll() {
-    if (!canEdit) return;
-    setSaving(true);
-    setMessage("");
-    try {
-      const res = await api.resetBranding();
-      if (res.data) setBrandingLocal(res.data);
-      setMessage(res.message || "Reset to defaults.");
-    } catch (err) {
-      setMessage(err instanceof Error ? err.message : "Reset failed");
     } finally {
-      setSaving(false);
+      setUploading(false);
+    }
+  }
     }
   }
 
@@ -222,41 +254,7 @@ export function DashboardBrandingSettings({ canEdit }: DashboardBrandingSettings
         </div>
       </div>
 
-      {/* Danger Zone */}
-      {canEdit ? (
-        <details className="group space-y-4 border-t border-border pt-6 [&_summary::-webkit-details-marker]:hidden">
-          <summary className="flex cursor-pointer items-center justify-between font-medium text-sm text-destructive hover:opacity-80 transition-opacity">
-            Danger Zone
-            <svg
-              className="h-4 w-4 transition-transform group-open:rotate-180"
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="m6 9 6 6 6-6" />
-            </svg>
-          </summary>
-          <div className="pt-2 space-y-4">
-            <p className="text-xs text-muted-foreground">
-              Reset all branding text and favicon to their original defaults.
-            </p>
-            <Button
-              type="button"
-              variant="destructive"
-              disabled={saving || uploading}
-              onClick={() => void resetAll()}
-            >
-              Reset Branding to Default
-            </Button>
-          </div>
-        </details>
-      ) : null}
+      </div>
     </div>
   );
 }

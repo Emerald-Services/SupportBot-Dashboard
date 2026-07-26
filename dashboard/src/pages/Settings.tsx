@@ -27,7 +27,7 @@ import {
   saveAccentTheme,
 } from "@/lib/accent-theme";
 import { normalizeHex } from "@/lib/normalize-hex";
-import { DashboardBrandingSettings } from "@/components/settings/dashboard-branding-settings";
+import { DashboardBrandingSettings, DashboardBrandingDangerZone } from "@/components/settings/dashboard-branding-settings";
 import { DashboardApiSettings } from "@/components/settings/dashboard-api-settings";
 
 export default function Settings() {
@@ -42,6 +42,7 @@ export default function Settings() {
     () => getStoredAccentHex() ?? DEFAULT_ACCENT_HEX,
   );
   const [accentSaved, setAccentSaved] = useState("");
+  const [activeTab, setActiveTab] = useState<"appearance" | "api" | "updates">("appearance");
 
   const loadCheck = useCallback(async () => {
     setLoading(true);
@@ -88,7 +89,37 @@ export default function Settings() {
         </p>
       </div>
 
-      <Card className="border-border bg-card">
+      <div className="flex flex-col md:flex-row gap-8 items-start">
+        <aside className="w-full md:w-56 shrink-0 sticky top-6">
+          <nav className="flex flex-row md:flex-col overflow-x-auto space-x-2 md:space-x-0 md:space-y-1 pb-2 md:pb-0">
+            <Button
+              variant={activeTab === "appearance" ? "secondary" : "ghost"}
+              className="justify-start w-full"
+              onClick={() => setActiveTab("appearance")}
+            >
+              Appearance
+            </Button>
+            <Button
+              variant={activeTab === "api" ? "secondary" : "ghost"}
+              className="justify-start w-full"
+              onClick={() => setActiveTab("api")}
+            >
+              API Config
+            </Button>
+            <Button
+              variant={activeTab === "updates" ? "secondary" : "ghost"}
+              className="justify-start w-full"
+              onClick={() => setActiveTab("updates")}
+            >
+              Update Checker
+            </Button>
+          </nav>
+        </aside>
+
+        <main className="flex-1 w-full max-w-4xl space-y-6">
+          {activeTab === "appearance" && (
+            <div className="space-y-6">
+              <Card className="border-border bg-card">
         <CardHeader>
           <CardTitle className="text-lg">Dashboard appearance</CardTitle>
           <CardDescription>
@@ -100,36 +131,33 @@ export default function Settings() {
           <DashboardBrandingSettings canEdit={canUpdate} />
 
           <div className="border-t border-border pt-4">
-            <p className="mb-3 text-sm font-medium">Accent colour</p>
+            <p className="mb-1 text-sm font-medium">Accent colour</p>
             <p className="mb-4 text-xs text-muted-foreground">
               Buttons, links, and highlights — saved in this browser only.
             </p>
-          <div className="flex flex-wrap items-end gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="accent-colour">Accent colour</Label>
-              <div className="flex items-center gap-2">
-                <ColorPicker
-                  value={accentHex}
-                  onChange={(hex) => {
-                    setAccentHex(hex);
-                    saveAccentTheme(hex);
-                    setAccentSaved("Accent updated.");
-                  }}
-                />
-                <Input
-                  id="accent-colour"
-                  value={accentHex}
-                  onChange={(e) => setAccentHex(e.target.value)}
-                  onBlur={() => {
-                    const next = normalizeHex(accentHex, DEFAULT_ACCENT_HEX);
-                    setAccentHex(next);
-                    saveAccentTheme(next);
-                    setAccentSaved("Accent updated.");
-                  }}
-                  className="w-32 border-border bg-secondary/30 font-mono uppercase"
-                  maxLength={7}
-                />
-              </div>
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-2">
+              <ColorPicker
+                value={accentHex}
+                onChange={(hex) => {
+                  setAccentHex(hex);
+                  saveAccentTheme(hex);
+                  setAccentSaved("Accent updated.");
+                }}
+              />
+              <Input
+                id="accent-colour"
+                value={accentHex}
+                onChange={(e) => setAccentHex(e.target.value)}
+                onBlur={() => {
+                  const next = normalizeHex(accentHex, DEFAULT_ACCENT_HEX);
+                  setAccentHex(next);
+                  saveAccentTheme(next);
+                  setAccentSaved("Accent updated.");
+                }}
+                className="w-32 border-border bg-secondary/30 font-mono uppercase"
+                maxLength={7}
+              />
             </div>
             <Button
               type="button"
@@ -143,7 +171,7 @@ export default function Settings() {
               Reset to default
             </Button>
           </div>
-          <div className="flex flex-wrap gap-2 text-sm">
+          <div className="flex flex-wrap gap-2 text-sm mt-5">
             <span
               className="rounded-md bg-primary px-3 py-1.5 font-medium text-primary-foreground"
             >
@@ -163,6 +191,20 @@ export default function Settings() {
         </CardContent>
       </Card>
 
+      {canUpdate && (
+        <Card className="border-destructive/50 bg-destructive/5">
+          <CardHeader>
+            <CardTitle className="text-lg text-destructive">Danger Zone</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <DashboardBrandingDangerZone canEdit={canUpdate} />
+          </CardContent>
+        </Card>
+      )}
+      </div>
+      )}
+
+      {activeTab === "api" && (
       <Card className="border-border bg-card">
         <CardHeader>
           <CardTitle className="text-lg">API Configuration</CardTitle>
@@ -174,7 +216,9 @@ export default function Settings() {
           <DashboardApiSettings />
         </CardContent>
       </Card>
+      )}
 
+      {activeTab === "updates" && (
       <Card className="border-border bg-card">
         <CardHeader>
           <CardTitle className="text-lg">Software updates</CardTitle>
@@ -273,6 +317,9 @@ export default function Settings() {
           </div>
         </CardContent>
       </Card>
+      )}
+        </main>
+      </div>
     </div>
   );
 }

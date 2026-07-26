@@ -192,9 +192,9 @@ export default function Overview() {
                     title: "Open ticket queue",
                     subtitle: `${openCount} waiting`,
                     icon: Ticket01Icon,
-                    href: "/transcripts",
-                    status: "todo" as ModuleStatus,
-                    meta: "View transcripts",
+                    href: "/tickets",
+                    status: "done" as ModuleStatus,
+                    meta: "View live tickets",
                   },
                 ]
               : tab === "closed"

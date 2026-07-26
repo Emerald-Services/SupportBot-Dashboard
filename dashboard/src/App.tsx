@@ -14,6 +14,7 @@ import Settings from "./pages/Settings";
 import SystemDetails from "./pages/SystemDetails";
 import Logs from "./pages/Logs";
 import Transcripts from "./pages/Transcripts";
+import Tickets from "./pages/Tickets";
 import Users from "./pages/Users";
 
 function Protected({ children }: { children: React.ReactNode }) {
@@ -87,6 +88,14 @@ export default function App() {
           element={
             <RequirePermission permission="logs">
               <Logs />
+            </RequirePermission>
+          }
+        />
+        <Route
+          path="tickets"
+          element={
+            <RequirePermission permission="transcripts">
+              <Tickets />
             </RequirePermission>
           }
         />

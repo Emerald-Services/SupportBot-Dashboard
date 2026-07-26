@@ -66,6 +66,14 @@ const sections: {
     ],
   },
   {
+    label: "Access & Logs",
+    items: [
+      { title: "Users", url: "/users", icon: UserMultiple02Icon, permission: "users.view" },
+      { title: "Tickets", url: "/tickets", icon: Ticket01Icon, permission: "transcripts" },
+      { title: "Transcripts", url: "/transcripts", icon: File02Icon, permission: "transcripts" },
+    ],
+  },
+  {
     label: "Configuration",
     items: [
       { title: "Bot Settings", url: "/configs?file=supportbot", icon: BotIcon },
@@ -73,14 +81,7 @@ const sections: {
       { title: "AI Assistant", url: "/configs?file=supportbot-ai", icon: AiBrain01Icon },
       { title: "Messages", url: "/configs?file=messages", icon: Message01Icon },
       { title: "Commands", url: "/configs?file=commands", icon: CommandIcon },
-    ],
-  },
-  {
-    label: "Access & Logs",
-    items: [
-      { title: "Users", url: "/users", icon: UserMultiple02Icon, permission: "users.view" },
-      { title: "Staff Roles", url: "/configs?file=supportbot", icon: UserMultiple02Icon },
-      { title: "Transcripts", url: "/transcripts", icon: File02Icon, permission: "transcripts" },
+      { title: "Staff Roles", url: "/configs?file=supportbot&tab=Roles", icon: UserMultiple02Icon },
     ],
   },
   {

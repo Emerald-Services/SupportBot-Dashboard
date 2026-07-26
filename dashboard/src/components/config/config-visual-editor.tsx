@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { AlertCircleIcon, FloppyDiskIcon } from "@hugeicons/core-free-icons";
 import { api, maskConfigSecrets } from "@/api/client";
 import { Icon } from "@/components/icon";
@@ -92,7 +93,10 @@ export function ConfigVisualEditor({ configFile }: ConfigVisualEditorProps) {
   const [mode, setMode] = useState<EditorMode>("visual");
   const [rawYaml, setRawYaml] = useState("");
   const [rawOriginal, setRawOriginal] = useState("");
-  const [activeSectionTitle, setActiveSectionTitle] = useState<string | null>(null);
+  const [searchParams] = useSearchParams();
+  const [activeSectionTitle, setActiveSectionTitle] = useState<string | null>(
+    () => searchParams.get("tab") || null
+  );
 
   const baseSchema = getSchema(configFile);
 
@@ -103,11 +107,17 @@ export function ConfigVisualEditor({ configFile }: ConfigVisualEditorProps) {
 
   useEffect(() => {
     if (effectiveSchema && effectiveSchema !== "commands") {
-      if (!activeSectionTitle || !effectiveSchema.find(s => s.title === activeSectionTitle)) {
+      const tabParam = searchParams.get("tab");
+      if (tabParam && effectiveSchema.find(s => s.title.toLowerCase() === tabParam.toLowerCase())) {
+        const found = effectiveSchema.find(s => s.title.toLowerCase() === tabParam.toLowerCase());
+        if (found && found.title !== activeSectionTitle) {
+          setActiveSectionTitle(found.title);
+        }
+      } else if (!activeSectionTitle || !effectiveSchema.find(s => s.title === activeSectionTitle)) {
         setActiveSectionTitle(effectiveSchema[0]?.title || null);
       }
     }
-  }, [effectiveSchema, activeSectionTitle]);
+  }, [effectiveSchema, activeSectionTitle, searchParams]);
 
   const load = useCallback(async () => {
     setLoading(true);
