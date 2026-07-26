@@ -26,6 +26,7 @@ export const SETUP_STEP_IDS = [
   "oauth",
   "redirectUri",
   "owners",
+  "emeraldApi",
 ] as const;
 
 export type SetupStepId = (typeof SETUP_STEP_IDS)[number];
@@ -65,6 +66,12 @@ export const SETUP_STEPS: {
     title: "Dashboard owners",
     subtitle: "Who can access this panel",
     icon: UserMultiple02Icon,
+  },
+  {
+    id: "emeraldApi",
+    title: "Emerald API",
+    subtitle: "One-click addons",
+    icon: Key01Icon,
   },
 ];
 
@@ -632,6 +639,59 @@ export function SetupNav({
             <Icon icon={ArrowRight01Icon} size={18} className="ml-1" />
           </Button>
         )}
+      </div>
+    </div>
+  );
+}
+
+export function EmeraldApiKeyStep({
+  values,
+  setValues,
+  validation,
+  validating,
+  onValidate,
+}: {
+  values: SetupFormValues;
+  setValues: (v: SetupFormValues) => void;
+  validation: Record<string, FieldValidationResult>;
+  validating: boolean;
+  onValidate: () => void;
+}) {
+  return (
+    <div className="flex flex-1 flex-col gap-5">
+      <p className="text-sm leading-relaxed text-muted-foreground">
+        An Emerald Services API key is required to use the one-click addon installer in the dashboard. You can get yours from the{" "}
+        <a
+          href="https://emeraldsrv.dev"
+          target="_blank"
+          rel="noreferrer"
+          className="font-medium text-primary hover:underline"
+        >
+          Emerald Services Marketplace
+        </a>.
+      </p>
+      <div className="space-y-2">
+        <Label htmlFor="emeraldApiKey">Emerald API key</Label>
+        <Input
+          id="emeraldApiKey"
+          type="password"
+          autoComplete="off"
+          value={values.emeraldApiKey}
+          onChange={(e) => setValues({ ...values, emeraldApiKey: e.target.value })}
+          placeholder="em_..."
+          className="h-11 font-mono text-sm"
+        />
+      </div>
+      <ValidationBanner result={validation.emeraldApi} />
+      <div className="mt-auto">
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={validating || !values.emeraldApiKey}
+          onClick={onValidate}
+        >
+          {validating ? "Checking…" : "Save key"}
+        </Button>
       </div>
     </div>
   );

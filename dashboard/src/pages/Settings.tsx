@@ -27,7 +27,7 @@ import {
   saveAccentTheme,
 } from "@/lib/accent-theme";
 import { normalizeHex } from "@/lib/normalize-hex";
-import { DashboardBrandingSettings, DashboardBrandingDangerZone } from "@/components/settings/dashboard-branding-settings";
+import { DashboardBrandingSettings, DashboardDangerZone } from "@/components/settings/dashboard-branding-settings";
 import { DashboardApiSettings } from "@/components/settings/dashboard-api-settings";
 
 export default function Settings() {
@@ -42,7 +42,7 @@ export default function Settings() {
     () => getStoredAccentHex() ?? DEFAULT_ACCENT_HEX,
   );
   const [accentSaved, setAccentSaved] = useState("");
-  const [activeTab, setActiveTab] = useState<"appearance" | "api" | "updates">("appearance");
+  const [activeTab, setActiveTab] = useState<"appearance" | "api" | "updates" | "danger">("appearance");
 
   const loadCheck = useCallback(async () => {
     setLoading(true);
@@ -113,6 +113,15 @@ export default function Settings() {
             >
               Update Checker
             </Button>
+            {canUpdate && (
+              <Button
+                variant="ghost"
+                className={`justify-start w-full text-destructive hover:bg-destructive/10 hover:text-destructive ${activeTab === "danger" ? "bg-destructive/10 border-l-2 border-destructive rounded-l-none" : ""}`}
+                onClick={() => setActiveTab("danger")}
+              >
+                Danger Zone
+              </Button>
+            )}
           </nav>
         </aside>
 
@@ -190,18 +199,21 @@ export default function Settings() {
           </div>
         </CardContent>
       </Card>
+      </div>
+      )}
 
-      {canUpdate && (
+      {activeTab === "danger" && canUpdate && (
         <Card className="border-destructive/50 bg-destructive/5">
           <CardHeader>
             <CardTitle className="text-lg text-destructive">Danger Zone</CardTitle>
+            <CardDescription className="text-destructive/80">
+              Destructive actions that reset or permanently alter your dashboard.
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <DashboardBrandingDangerZone canEdit={canUpdate} />
+            <DashboardDangerZone canEdit={canUpdate} />
           </CardContent>
         </Card>
-      )}
-      </div>
       )}
 
       {activeTab === "api" && (

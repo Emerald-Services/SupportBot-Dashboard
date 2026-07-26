@@ -6,6 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useBranding } from "@/context/BrandingContext";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -20,22 +29,23 @@ interface DashboardBrandingSettingsProps {
   canEdit: boolean;
 }
 
-export function DashboardBrandingDangerZone({ canEdit }: DashboardBrandingSettingsProps) {
-  const { setBrandingLocal } = useBranding();
+export function DashboardDangerZone({ canEdit }: DashboardBrandingSettingsProps) {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+  const [open, setOpen] = useState(false);
 
-  async function resetAll() {
+  async function resetDashboard() {
     if (!canEdit) return;
     setSaving(true);
     setMessage("");
     try {
-      const res = await api.resetBranding();
-      if (res.data) setBrandingLocal(res.data);
-      setMessage(res.message || "Reset to defaults.");
+      const res = await api.resetDashboard();
+      setMessage(res.message || "Dashboard reset successfully.");
+      setTimeout(() => {
+        window.location.href = "/setup";
+      }, 1500);
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Reset failed");
-    } finally {
       setSaving(false);
     }
   }
@@ -45,17 +55,34 @@ export function DashboardBrandingDangerZone({ canEdit }: DashboardBrandingSettin
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        Reset all branding text and favicon to their original defaults.
+        Reset the dashboard to factory settings. This clears the configuration and returns you to the initial setup screen.
       </p>
-      <Button
-        type="button"
-        variant="destructive"
-        disabled={saving}
-        onClick={() => void resetAll()}
-      >
-        Reset Branding to Default
-      </Button>
-      {message && <p className="text-xs text-muted-foreground">{message}</p>}
+      
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          <Button type="button" variant="destructive">
+            Reset Dashboard
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Are you absolutely sure?</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. This will reset the dashboard to setup mode.
+              You will need to reconnect the Discord OAuth and reconfigure the dashboard owners.
+            </DialogDescription>
+          </DialogHeader>
+          {message && <p className="text-sm font-medium text-destructive">{message}</p>}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpen(false)} disabled={saving}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={() => void resetDashboard()} disabled={saving}>
+              {saving ? "Resetting..." : "Yes, reset dashboard"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -123,13 +150,6 @@ export function DashboardBrandingSettings({ canEdit }: DashboardBrandingSettings
       setMessage(err instanceof Error ? err.message : "Remove failed");
     } finally {
       setUploading(false);
-    }
-  }
-
-    } finally {
-      setUploading(false);
-    }
-  }
     }
   }
 
@@ -252,8 +272,6 @@ export function DashboardBrandingSettings({ canEdit }: DashboardBrandingSettings
             ) : null}
           </div>
         </div>
-      </div>
-
       </div>
     </div>
   );

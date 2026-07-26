@@ -15,6 +15,7 @@ import {
   SetupProgress,
   SetupStepCard,
   SetupWizardShell,
+  EmeraldApiKeyStep,
   type SetupStepId,
 } from "@/components/setup/setup-wizard";
 import { useBranding } from "@/context/BrandingContext";
@@ -37,6 +38,7 @@ function parseOwnerIds(raw: string) {
 function validationKeyForStep(id: SetupStepId): string {
   if (id === "oauth") return "oauth";
   if (id === "owners") return "owners";
+  if (id === "emeraldApi") return "emeraldApi";
   return id;
 }
 
@@ -53,6 +55,7 @@ export default function Setup() {
     clientSecret: "",
     redirectUri: "",
     ownerUserIds: "",
+    emeraldApiKey: "",
   });
   const [validation, setValidation] = useState<Record<string, FieldValidationResult>>({});
   const [validating, setValidating] = useState(false);
@@ -76,6 +79,7 @@ export default function Setup() {
       clientSecret: values.clientSecret,
       redirectUri: values.redirectUri,
       ownerUserIds: parseOwnerIds(values.ownerUserIds),
+      emeraldApiKey: values.emeraldApiKey,
     }),
     [values],
   );
@@ -163,6 +167,10 @@ export default function Setup() {
         return (
           <OwnersStep {...common} onValidate={() => void validateCurrentStep()} />
         );
+      case "emeraldApi":
+        return (
+          <EmeraldApiKeyStep {...common} onValidate={() => void validateCurrentStep()} />
+        );
     }
   }
 
@@ -184,7 +192,7 @@ export default function Setup() {
     <SetupWizardShell
       brandingTitle={branding.title}
       faviconUrl={branding.faviconUrl}
-      faviconVersion={branding.updatedAt}
+      faviconVersion={branding.updatedAt ?? undefined}
       hasFavicon={branding.hasFavicon}
     >
       {statusError ? (

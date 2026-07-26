@@ -83,24 +83,16 @@ export default function Addons() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Addons</h1>
           <p className="text-muted-foreground">
-            Install addons from the{" "}
+            Requires an API key from{" "}
             <a
-              href={repository || "https://emeraldsrv.dev"}
+              href="https://emeraldsrv.dev"
               target="_blank"
               rel="noreferrer"
               className="text-primary underline-offset-4 hover:underline"
             >
-              Emerald Services Marketplace
-            </a>
-            . Enable addons under{" "}
-            <Link
-              to="/configs?file=supportbot"
-              className="text-primary underline-offset-4 hover:underline"
-            >
-              Bot config → General → Addons
-            </Link>
-            . Installed addon configs appear in the left sidebar under{" "}
-            <strong className="font-medium text-foreground">Addons</strong>.
+              emeraldsrv.dev
+            </a>{" "}
+            to browse and install addons. Configs will appear in the sidebar once installed.
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={load} disabled={loading}>

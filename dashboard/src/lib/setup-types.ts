@@ -35,4 +35,5 @@ export interface SetupFormValues {
   clientSecret: string;
   redirectUri: string;
   ownerUserIds: string;
+  emeraldApiKey: string;
 }

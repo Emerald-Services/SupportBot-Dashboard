@@ -80,8 +80,8 @@ const sections: {
       { title: "Ticket Panel", url: "/configs?file=ticket-panel", icon: Ticket01Icon },
       { title: "AI Assistant", url: "/configs?file=supportbot-ai", icon: AiBrain01Icon },
       { title: "Messages", url: "/configs?file=messages", icon: Message01Icon },
-      { title: "Commands", url: "/configs?file=commands", icon: CommandIcon },
       { title: "Staff Roles", url: "/configs?file=supportbot&tab=Roles", icon: UserMultiple02Icon },
+      { title: "Commands", url: "/configs?file=commands", icon: CommandIcon },
     ],
   },
   {

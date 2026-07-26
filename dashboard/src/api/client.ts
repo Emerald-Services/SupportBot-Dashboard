@@ -584,6 +584,11 @@ export const api = {
       { method: "POST", body: JSON.stringify(body) },
     ),
 
+  resetDashboard: () =>
+    request<ApiResponse<unknown>>("/api/dashboard/setup/reset", {
+      method: "POST",
+    }),
+
   completeSetup: (body: Record<string, unknown>) =>
     request<
       ApiResponse<{ setupComplete: boolean; botRestart?: BotRestartResult }>
