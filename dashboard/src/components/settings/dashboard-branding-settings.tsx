@@ -224,22 +224,38 @@ export function DashboardBrandingSettings({ canEdit }: DashboardBrandingSettings
 
       {/* Danger Zone */}
       {canEdit ? (
-        <div className="space-y-4 border-t border-border pt-6">
-          <div>
-            <p className="text-sm font-medium">Danger Zone</p>
+        <details className="group space-y-4 border-t border-border pt-6 [&_summary::-webkit-details-marker]:hidden">
+          <summary className="flex cursor-pointer items-center justify-between font-medium text-sm text-destructive hover:opacity-80 transition-opacity">
+            Danger Zone
+            <svg
+              className="h-4 w-4 transition-transform group-open:rotate-180"
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="m6 9 6 6 6-6" />
+            </svg>
+          </summary>
+          <div className="pt-2 space-y-4">
             <p className="text-xs text-muted-foreground">
               Reset all branding text and favicon to their original defaults.
             </p>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={saving || uploading}
+              onClick={() => void resetAll()}
+            >
+              Reset Branding to Default
+            </Button>
           </div>
-          <Button
-            type="button"
-            variant="destructive"
-            disabled={saving || uploading}
-            onClick={() => void resetAll()}
-          >
-            Reset Branding to Default
-          </Button>
-        </div>
+        </details>
       ) : null}
     </div>
   );
