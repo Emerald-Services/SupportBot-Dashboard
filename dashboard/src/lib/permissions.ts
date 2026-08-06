@@ -23,6 +23,7 @@ export interface ConfigFilePermission {
 
 export interface DashboardPermissions {
   overview: boolean;
+  tickets: boolean;
   logs: boolean;
   transcripts: boolean;
   settings: { view: boolean; update: boolean };
@@ -35,7 +36,8 @@ export interface DashboardUser {
   username: string;
   globalName: string | null;
   avatar: string;
-  role: DashboardRole;
+  role: string;
+  groupId?: string;
   isOwner: boolean;
   permissions: DashboardPermissions;
 }
@@ -45,6 +47,18 @@ export interface StoredDashboardUser extends DashboardUser {
   yamlOwner: boolean;
   createdAt: number;
   updatedAt: number;
+}
+
+export interface DashboardGroup {
+  id: string;
+  name: string;
+  description: string;
+  color: string;
+  discordRoleId: string | null;
+  isSystem: boolean;
+  permissions: DashboardPermissions;
+  createdAt?: number;
+  updatedAt?: number;
 }
 
 export const ROLE_LABELS: Record<DashboardRole, string> = {
@@ -80,6 +94,7 @@ export function hasPermission(
   if (!permissions) return false;
 
   if (key === "overview") return permissions.overview;
+  if (key === "tickets") return permissions.tickets ?? permissions.overview;
   if (key === "logs") return permissions.logs;
   if (key === "transcripts") return permissions.transcripts;
   if (key === "settings.view") return permissions.settings.view;
@@ -135,6 +150,7 @@ function configMap(view: boolean, edit: boolean): Record<ConfigFile, ConfigFileP
 export function fullPermissions(): DashboardPermissions {
   return {
     overview: true,
+    tickets: true,
     logs: true,
     transcripts: true,
     settings: { view: true, update: true },
@@ -154,6 +170,7 @@ export function defaultPermissionsForRole(
     case "moderator":
       return {
         overview: true,
+        tickets: true,
         logs: true,
         transcripts: true,
         settings: { view: true, update: false },
@@ -163,6 +180,7 @@ export function defaultPermissionsForRole(
     case "editor":
       return {
         overview: true,
+        tickets: true,
         logs: true,
         transcripts: false,
         settings: { view: true, update: false },
@@ -172,6 +190,7 @@ export function defaultPermissionsForRole(
     case "viewer":
       return {
         overview: true,
+        tickets: true,
         logs: true,
         transcripts: true,
         settings: { view: true, update: false },

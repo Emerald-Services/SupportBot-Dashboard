@@ -11,6 +11,7 @@ import {
   PlusSignIcon,
   PackageIcon,
   Settings02Icon,
+  Shield01Icon,
   Ticket01Icon,
   UserMultiple02Icon,
 } from "@hugeicons/core-free-icons";
@@ -69,7 +70,8 @@ const sections: {
     label: "Access & Logs",
     items: [
       { title: "Users", url: "/users", icon: UserMultiple02Icon, permission: "users.view" },
-      { title: "Tickets", url: "/tickets", icon: Ticket01Icon, permission: "transcripts" },
+      { title: "Groups", url: "/groups", icon: Shield01Icon, permission: "users.view" },
+      { title: "Tickets", url: "/tickets", icon: Ticket01Icon, permission: "overview" },
       { title: "Transcripts", url: "/transcripts", icon: File02Icon, permission: "transcripts" },
     ],
   },

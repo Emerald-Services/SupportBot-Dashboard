@@ -35,6 +35,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/context/AuthContext";
 import {
   CONFIG_FILE_LABELS,
@@ -43,6 +44,7 @@ import {
   displayDiscordName,
   ROLE_HINTS,
   ROLE_LABELS,
+  type DashboardGroup,
   type DashboardPermissions,
   type DashboardRole,
 } from "@/lib/permissions";
@@ -91,119 +93,186 @@ function PermissionEditor({
   const set = (patch: Partial<DashboardPermissions>) =>
     onChange({ ...permissions, ...patch });
 
+  const PERM_ITEMS: {
+    key: "overview" | "tickets" | "logs" | "transcripts";
+    title: string;
+    description: string;
+  }[] = [
+    {
+      key: "overview",
+      title: "Dashboard Overview",
+      description: "Access to system metrics, bot health status, and main dashboard stats.",
+    },
+    {
+      key: "tickets",
+      title: "Tickets",
+      description: "View open support tickets, live web chat, send staff replies, and close tickets.",
+    },
+    {
+      key: "transcripts",
+      title: "Transcripts",
+      description: "Access saved ticket HTML transcripts and configure public transcript options.",
+    },
+    {
+      key: "logs",
+      title: "Console Logs",
+      description: "View real-time bot terminal output, system logs, and runtime error traces.",
+    },
+  ];
+
+  const CONFIG_ITEMS: [string, string, string][] = [
+    ["supportbot", "Bot config", "Main bot token, prefix, channels, categories, and core settings."],
+    ["ticket-panel", "Ticket panel", "Ticket home embed, button labels, dropdown options, and panel styling."],
+    ["commands", "Commands", "Enable/disable slash commands, descriptions, and custom names."],
+    ["messages", "Messages", "Custom bot response messages, welcome embeds, and embed colors."],
+    ["supportbot-ai", "AI assistant", "Configure AI support rules, model API keys, and auto-response channels."],
+  ];
+
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2">
-        {(
-          [
-            ["Dashboard overview", "overview"],
-            ["Logs", "logs"],
-            ["Transcripts", "transcripts"],
-          ] as const
-        ).map(([label, key]) => (
-          <label
-            key={key}
-            className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2"
-          >
-            <span className="text-sm">{label}</span>
+      <div className="space-y-2.5">
+        <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          General Capabilities
+        </h4>
+        <div className="grid gap-2.5">
+          {PERM_ITEMS.map(({ key, title, description }) => (
+            <label
+              key={key}
+              className="flex items-center justify-between gap-4 rounded-xl border border-border bg-secondary/20 p-3 transition-colors hover:bg-secondary/40"
+            >
+              <div className="space-y-0.5 min-w-0">
+                <p className="text-sm font-semibold text-foreground">{title}</p>
+                <p className="text-xs text-muted-foreground leading-snug">{description}</p>
+              </div>
+              <Switch
+                checked={permissions[key] ?? (key === "tickets" ? permissions.overview : false)}
+                disabled={disabled}
+                onCheckedChange={(checked) => set({ [key]: checked })}
+                className="shrink-0"
+              />
+            </label>
+          ))}
+
+          {/* Settings View */}
+          <label className="flex items-center justify-between gap-4 rounded-xl border border-border bg-secondary/20 p-3 transition-colors hover:bg-secondary/40">
+            <div className="space-y-0.5 min-w-0">
+              <p className="text-sm font-semibold text-foreground">Settings (View)</p>
+              <p className="text-xs text-muted-foreground leading-snug">
+                View system branding, OAuth configurations, and system health details.
+              </p>
+            </div>
             <Switch
-              checked={permissions[key]}
+              checked={permissions.settings.view}
               disabled={disabled}
-              onCheckedChange={(checked) => set({ [key]: checked })}
+              onCheckedChange={(view) => set({ settings: { ...permissions.settings, view } })}
+              className="shrink-0"
             />
           </label>
-        ))}
-        <label className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2">
-          <span className="text-sm">Settings — view</span>
-          <Switch
-            checked={permissions.settings.view}
-            disabled={disabled}
-            onCheckedChange={(view) =>
-              set({ settings: { ...permissions.settings, view } })
-            }
-          />
-        </label>
-        <label className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2">
-          <span className="text-sm">Settings — install updates</span>
-          <Switch
-            checked={permissions.settings.update}
-            disabled={disabled}
-            onCheckedChange={(update) =>
-              set({ settings: { ...permissions.settings, update } })
-            }
-          />
-        </label>
-        <label className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2">
-          <span className="text-sm">Users — view</span>
-          <Switch
-            checked={permissions.users.view}
-            disabled={disabled}
-            onCheckedChange={(view) =>
-              set({ users: { ...permissions.users, view } })
-            }
-          />
-        </label>
-        <label className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2">
-          <span className="text-sm">Users — manage</span>
-          <Switch
-            checked={permissions.users.manage}
-            disabled={disabled}
-            onCheckedChange={(manage) =>
-              set({ users: { ...permissions.users, manage } })
-            }
-          />
-        </label>
+
+          {/* Settings Install Updates */}
+          <label className="flex items-center justify-between gap-4 rounded-xl border border-border bg-secondary/20 p-3 transition-colors hover:bg-secondary/40">
+            <div className="space-y-0.5 min-w-0">
+              <p className="text-sm font-semibold text-foreground">Settings (Install Updates)</p>
+              <p className="text-xs text-muted-foreground leading-snug">
+                Perform 1-click bot system updates and trigger bot server restarts.
+              </p>
+            </div>
+            <Switch
+              checked={permissions.settings.update}
+              disabled={disabled}
+              onCheckedChange={(update) => set({ settings: { ...permissions.settings, update } })}
+              className="shrink-0"
+            />
+          </label>
+
+          {/* Users View */}
+          <label className="flex items-center justify-between gap-4 rounded-xl border border-border bg-secondary/20 p-3 transition-colors hover:bg-secondary/40">
+            <div className="space-y-0.5 min-w-0">
+              <p className="text-sm font-semibold text-foreground">Users & Groups (View)</p>
+              <p className="text-xs text-muted-foreground leading-snug">
+                View dashboard staff accounts and permission group listings.
+              </p>
+            </div>
+            <Switch
+              checked={permissions.users.view}
+              disabled={disabled}
+              onCheckedChange={(view) => set({ users: { ...permissions.users, view } })}
+              className="shrink-0"
+            />
+          </label>
+
+          {/* Users Manage */}
+          <label className="flex items-center justify-between gap-4 rounded-xl border border-border bg-secondary/20 p-3 transition-colors hover:bg-secondary/40">
+            <div className="space-y-0.5 min-w-0">
+              <p className="text-sm font-semibold text-foreground">Users & Groups (Manage)</p>
+              <p className="text-xs text-muted-foreground leading-snug">
+                Create, edit, assign, and delete staff accounts and permission groups.
+              </p>
+            </div>
+            <Switch
+              checked={permissions.users.manage}
+              disabled={disabled}
+              onCheckedChange={(manage) => set({ users: { ...permissions.users, manage } })}
+              className="shrink-0"
+            />
+          </label>
+        </div>
       </div>
 
-      <div className="space-y-3">
-        <p className="text-sm font-medium">Configuration files</p>
-        <div className="space-y-2">
-          {CONFIG_FILES.map((file) => (
-            <div
-              key={file}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border px-3 py-2"
-            >
-              <span className="text-sm">{CONFIG_FILE_LABELS[file]}</span>
-              <div className="flex items-center gap-4">
-                <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                  View
-                  <Switch
-                    checked={permissions.configs[file].view}
-                    disabled={disabled}
-                    onCheckedChange={(view) =>
-                      onChange({
-                        ...permissions,
-                        configs: {
-                          ...permissions.configs,
-                          [file]: { ...permissions.configs[file], view },
-                        },
-                      })
-                    }
-                  />
-                </label>
-                <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                  Edit
-                  <Switch
-                    checked={permissions.configs[file].edit}
-                    disabled={disabled}
-                    onCheckedChange={(edit) =>
-                      onChange({
-                        ...permissions,
-                        configs: {
-                          ...permissions.configs,
-                          [file]: {
-                            ...permissions.configs[file],
-                            edit,
-                            view: edit ? true : permissions.configs[file].view,
+      <div className="space-y-2.5">
+        <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Configuration Files Access
+        </h4>
+        <div className="grid gap-2.5">
+          {CONFIG_ITEMS.map(([file, title, description]) => {
+            const cur = permissions.configs?.[file as keyof typeof permissions.configs] ?? {
+              view: false,
+              edit: false,
+            };
+            return (
+              <div
+                key={file}
+                className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-border bg-secondary/20 p-3 transition-colors hover:bg-secondary/40"
+              >
+                <div className="space-y-0.5 min-w-0">
+                  <p className="text-sm font-semibold text-foreground">{title}</p>
+                  <p className="text-xs text-muted-foreground leading-snug">{description}</p>
+                </div>
+                <div className="flex items-center gap-4 shrink-0">
+                  <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground cursor-pointer">
+                    <span>View</span>
+                    <Switch
+                      checked={cur.view}
+                      disabled={disabled}
+                      onCheckedChange={(view) =>
+                        set({
+                          configs: {
+                            ...permissions.configs,
+                            [file]: { ...cur, view },
                           },
-                        },
-                      })
-                    }
-                  />
-                </label>
+                        })
+                      }
+                    />
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground cursor-pointer">
+                    <span>Edit</span>
+                    <Switch
+                      checked={cur.edit}
+                      disabled={disabled}
+                      onCheckedChange={(edit) =>
+                        set({
+                          configs: {
+                            ...permissions.configs,
+                            [file]: { ...cur, edit, view: edit ? true : cur.view },
+                          },
+                        })
+                      }
+                    />
+                  </label>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
@@ -224,6 +293,7 @@ export default function Users() {
   const canManage = hasPermission("users.manage");
 
   const [users, setUsers] = useState<StoredDashboardUser[]>([]);
+  const [groups, setGroups] = useState<DashboardGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [editor, setEditor] = useState<EditorState | null>(null);
@@ -233,8 +303,12 @@ export default function Users() {
     setLoading(true);
     setError("");
     try {
-      const res = await api.listDashboardUsers();
-      if (res.data) setUsers(res.data.users);
+      const [uRes, gRes] = await Promise.all([
+        api.listDashboardUsers(),
+        api.listGroups().catch(() => ({ data: { groups: [] } })),
+      ]);
+      if (uRes.data) setUsers(uRes.data.users);
+      if (gRes.data) setGroups(gRes.data.groups);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load users");
     } finally {
@@ -357,79 +431,128 @@ export default function Users() {
         </Alert>
       ) : null}
 
-      <Card className="border-border bg-card">
-        <CardHeader>
-          <CardTitle className="text-base">Dashboard access</CardTitle>
-          <CardDescription>
-            {sortedUsers.length} user{sortedUsers.length === 1 ? "" : "s"}
-            {canManage ? " — use edit to change permissions" : ""}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <Card className="border-border bg-card overflow-hidden">
+        <CardContent className="p-0">
           {loading ? (
-            <p className="text-sm text-muted-foreground">Loading users…</p>
+            <div className="p-4 space-y-2">
+              <Skeleton className="h-8 w-full rounded-md" />
+              <Skeleton className="h-8 w-full rounded-md" />
+            </div>
+          ) : sortedUsers.length === 0 ? (
+            <div className="p-6 text-center text-xs text-muted-foreground">
+              No users found.
+            </div>
           ) : (
-            <div className="divide-y divide-border/60">
-              {sortedUsers.map((u) => (
-                <div
-                  key={u.id}
-                  className="flex flex-wrap items-center gap-4 py-4 first:pt-0 last:pb-0"
-                >
-                  <div className="flex min-w-[200px] flex-1 items-center gap-3">
-                    <Avatar className="size-9">
-                      <AvatarImage src={u.avatar} alt={u.username} />
-                      <AvatarFallback>
-                        {(u.username || u.id).slice(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0">
-                      <p className="truncate font-medium">
-                        {displayDiscordName(u)}
-                        {u.id === currentUser?.id ? " (you)" : ""}
-                      </p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {u.id}
-                      </p>
-                    </div>
-                  </div>
-                  <Badge variant="secondary">
-                    {ROLE_LABELS[u.yamlOwner ? "owner" : u.role]}
-                  </Badge>
-                  <p className="max-w-[200px] text-xs text-muted-foreground">
-                    {accessSummary(u)}
-                  </p>
-                  {u.enabled ? (
-                    <Badge className="bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/15">
-                      Active
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline">Disabled</Badge>
-                  )}
-                  {canManage ? (
-                    <div className="ml-auto flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => openEdit(u)}
-                        aria-label="Edit user"
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-border/80 bg-secondary/30 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                    <th className="px-4 py-2.5">User</th>
+                    <th className="px-4 py-2.5">Group</th>
+                    <th className="px-4 py-2.5">Access Summary</th>
+                    <th className="px-4 py-2.5">Status</th>
+                    {canManage && <th className="px-4 py-2.5 text-right">Actions</th>}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/40">
+                  {sortedUsers.map((u) => {
+                    const matchedGroup = groups.find(
+                      (g) => g.id === u.groupId || g.id === u.role
+                    );
+                    const groupColor = matchedGroup?.color || "#10B981";
+                    const groupName = matchedGroup?.name || ROLE_LABELS[u.yamlOwner ? "owner" : (u.role as keyof typeof ROLE_LABELS)] || u.role;
+
+                    return (
+                      <tr
+                        key={u.id}
+                        className="transition-colors hover:bg-secondary/25"
                       >
-                        <Icon icon={Edit02Icon} size={16} />
-                      </Button>
-                      {!u.yamlOwner ? (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-destructive"
-                          onClick={() => removeUser(u.id)}
-                          aria-label="Remove user"
-                        >
-                          <Icon icon={Delete02Icon} size={16} />
-                        </Button>
-                      ) : null}
-                    </div>
-                  ) : null}
-                </div>
-              ))}
+                        <td className="px-4 py-2.5 font-medium whitespace-nowrap">
+                          <div className="flex items-center gap-2.5">
+                            <Avatar className="size-7">
+                              <AvatarImage src={u.avatar} alt={u.username} />
+                              <AvatarFallback className="text-[10px]">
+                                {(u.username || u.id).slice(0, 2).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0 leading-tight">
+                              <p className="truncate font-semibold text-foreground text-xs">
+                                {displayDiscordName(u)}
+                                {u.id === currentUser?.id ? (
+                                  <span className="text-[11px] text-primary font-normal ml-1">(you)</span>
+                                ) : ""}
+                              </p>
+                              <p className="truncate text-[10px] text-muted-foreground font-mono">
+                                {u.id}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+
+                        <td className="px-4 py-2.5 whitespace-nowrap">
+                          <div className="flex items-center gap-1.5">
+                            <span
+                              className="size-2 rounded-full shrink-0 shadow-sm"
+                              style={{ backgroundColor: groupColor }}
+                            />
+                            <span className="font-medium text-xs text-foreground">
+                              {groupName}
+                            </span>
+                            {u.yamlOwner && (
+                              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+                                Config Owner
+                              </span>
+                            )}
+                          </div>
+                        </td>
+
+                        <td className="px-4 py-2.5 text-xs text-muted-foreground max-w-xs truncate">
+                          {accessSummary(u)}
+                        </td>
+
+                        <td className="px-4 py-2.5 whitespace-nowrap">
+                          {u.enabled ? (
+                            <Badge className="text-[10px] px-2 py-0.5 bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/15 border-emerald-500/20">
+                              Active
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-[10px] px-2 py-0.5">
+                              Disabled
+                            </Badge>
+                          )}
+                        </td>
+
+                        {canManage && (
+                          <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
+                                onClick={() => openEdit(u)}
+                              >
+                                <Icon icon={Edit02Icon} size={13} />
+                                Edit
+                              </Button>
+                              {!u.yamlOwner && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-7 px-2 text-xs gap-1 text-muted-foreground hover:text-destructive"
+                                  onClick={() => removeUser(u.id)}
+                                >
+                                  <Icon icon={Delete02Icon} size={13} />
+                                  Remove
+                                </Button>
+                              )}
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </CardContent>
@@ -489,11 +612,22 @@ export default function Users() {
               </div>
 
               <div className="space-y-2">
-                <Label>Role</Label>
+                <Label>Permission Group</Label>
                 <Select
                   value={editor.role}
                   disabled={editor.yamlOwner}
-                  onValueChange={(v) => setRole(v as DashboardRole)}
+                  onValueChange={(v) => {
+                    const matchedGroup = groups.find((g) => g.id === v);
+                    if (matchedGroup) {
+                      setEditor({
+                        ...editor,
+                        role: v,
+                        permissions: matchedGroup.permissions,
+                      });
+                    } else {
+                      setRole(v as DashboardRole);
+                    }
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -501,6 +635,18 @@ export default function Users() {
                   <SelectContent>
                     {editor.yamlOwner ? (
                       <SelectItem value="owner">Owner</SelectItem>
+                    ) : groups.length > 0 ? (
+                      groups.map((group) => (
+                        <SelectItem key={group.id} value={group.id}>
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="size-2.5 rounded-full shrink-0"
+                              style={{ backgroundColor: group.color || "#10B981" }}
+                            />
+                            <span>{group.name}</span>
+                          </div>
+                        </SelectItem>
+                      ))
                     ) : (
                       ASSIGNABLE_ROLES.map((role) => (
                         <SelectItem key={role} value={role}>

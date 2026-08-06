@@ -13,6 +13,7 @@ import {
   canViewConfig,
   displayDiscordName,
   hasPermission,
+  type DashboardGroup,
   type DashboardPermissions,
   type DashboardUser,
 } from "../lib/permissions";
@@ -22,6 +23,11 @@ interface AuthContextValue {
   permissions: DashboardPermissions | null;
   isAuthenticated: boolean;
   loading: boolean;
+  availableGroups: DashboardGroup[];
+  isImpersonating: boolean;
+  impersonatedGroup: DashboardGroup | null;
+  impersonateGroup: (groupId: string) => void;
+  stopImpersonation: () => void;
   loginWithDiscord: () => void;
   logout: () => Promise<void>;
   refreshSession: () => Promise<boolean>;
@@ -32,15 +38,28 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+const STORAGE_KEY = "nexus_impersonate_group";
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<DashboardUser | null>(null);
+  const [groups, setGroups] = useState<DashboardGroup[]>([]);
   const [loading, setLoading] = useState(true);
+  const [impersonatedGroupId, setImpersonatedGroupId] = useState<string | null>(
+    () => (typeof window !== "undefined" ? sessionStorage.getItem(STORAGE_KEY) : null)
+  );
 
   const refreshSession = useCallback(async () => {
     try {
-      const res = await api.me();
-      if (res.data) {
-        setUser(res.data);
+      const [userRes, groupsRes] = await Promise.all([
+        api.me(),
+        api.listGroups().catch(() => ({ data: { groups: [] } })),
+      ]);
+
+      if (userRes.data) {
+        setUser(userRes.data);
+        if (groupsRes.data?.groups) {
+          setGroups(groupsRes.data.groups);
+        }
         return true;
       }
       setUser(null);
@@ -61,27 +80,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     try {
+      if (typeof window !== "undefined") sessionStorage.removeItem(STORAGE_KEY);
+      setImpersonatedGroupId(null);
       await api.logout();
     } finally {
       setUser(null);
     }
   }, []);
 
-  const permissions = user?.permissions ?? null;
+  const impersonateGroup = useCallback((groupId: string) => {
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem(STORAGE_KEY, groupId);
+    }
+    setImpersonatedGroupId(groupId);
+  }, []);
+
+  const stopImpersonation = useCallback(() => {
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem(STORAGE_KEY);
+    }
+    setImpersonatedGroupId(null);
+  }, []);
+
+  const impersonatedGroup = useMemo(
+    () => groups.find((g) => g.id === impersonatedGroupId) || null,
+    [groups, impersonatedGroupId]
+  );
+
+  const isImpersonating = Boolean(impersonatedGroupId && impersonatedGroup);
+
+  // Effective permissions: use impersonated group's permissions if active, else real user permissions
+  const permissions = useMemo(() => {
+    if (isImpersonating && impersonatedGroup) {
+      return impersonatedGroup.permissions;
+    }
+    return user?.permissions ?? null;
+  }, [isImpersonating, impersonatedGroup, user]);
 
   const checkPermission = useCallback(
     (key: string) => hasPermission(permissions, key),
-    [permissions],
+    [permissions]
   );
 
   const checkViewConfig = useCallback(
     (file: string) => canViewConfig(permissions, file),
-    [permissions],
+    [permissions]
   );
 
   const checkEditConfig = useCallback(
     (file: string) => canEditConfig(permissions, file),
-    [permissions],
+    [permissions]
   );
 
   const value = useMemo(
@@ -90,6 +138,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       permissions,
       isAuthenticated: !!user,
       loading,
+      availableGroups: groups,
+      isImpersonating,
+      impersonatedGroup,
+      impersonateGroup,
+      stopImpersonation,
       loginWithDiscord,
       logout,
       refreshSession,
@@ -101,13 +154,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       permissions,
       loading,
+      groups,
+      isImpersonating,
+      impersonatedGroup,
+      impersonateGroup,
+      stopImpersonation,
       loginWithDiscord,
       logout,
       refreshSession,
       checkPermission,
       checkViewConfig,
       checkEditConfig,
-    ],
+    ]
   );
 
   return (

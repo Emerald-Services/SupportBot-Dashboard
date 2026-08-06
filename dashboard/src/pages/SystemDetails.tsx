@@ -26,6 +26,9 @@ import {
   STATUS_BADGE,
 } from "@/lib/module-status-labels";
 
+import { useRealtimeStream, type StreamMetrics } from "@/hooks/useRealtimeStream";
+import { Badge } from "@/components/ui/badge";
+
 function DetailRow({
   label,
   value,
@@ -71,6 +74,13 @@ export default function SystemDetails() {
     setupComplete?: boolean;
   } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [liveMetrics, setLiveMetrics] = useState<StreamMetrics | null>(null);
+
+  const { connected } = useRealtimeStream({
+    onMetrics: (metrics) => {
+      setLiveMetrics(metrics);
+    },
+  });
 
   const loadExtra = useCallback(async () => {
     const [guildRes, healthRes] = await Promise.all([
@@ -78,12 +88,12 @@ export default function SystemDetails() {
       api.health().catch(() => null),
     ]);
     if (guildRes?.data) setGuildHealth(guildRes.data);
-    if (healthRes?.success) {
+    if (healthRes?.success && healthRes.data) {
       setApiHealth({
-        dashboard: healthRes.dashboard,
-        botReady: healthRes.botReady,
-        oauthEnabled: healthRes.oauthEnabled,
-        setupComplete: healthRes.setupComplete,
+        dashboard: healthRes.data.dashboard,
+        botReady: healthRes.data.botReady,
+        oauthEnabled: healthRes.data.oauthEnabled,
+        setupComplete: (healthRes.data as { setupComplete?: boolean }).setupComplete,
       });
     }
   }, []);
@@ -210,31 +220,63 @@ export default function SystemDetails() {
         </Card>
 
         <Card className="border-border bg-card">
-          <CardHeader>
-            <CardTitle className="text-lg">Host machine</CardTitle>
-            <CardDescription>Server resources running this instance</CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-lg">Host machine</CardTitle>
+              <CardDescription>Server resources running this instance</CardDescription>
+            </div>
+            <Badge variant={connected ? "default" : "outline"} className="text-xs">
+              <span
+                className={`mr-1.5 inline-block h-2 w-2 rounded-full ${
+                  connected ? "bg-emerald-500 animate-pulse" : "bg-muted"
+                }`}
+              />
+              {connected ? "Live Stream" : "Polling"}
+            </Badge>
           </CardHeader>
           <CardContent>
             <dl>
               <DetailRow
                 label="Memory used"
-                value={`${stats.hosting.ram_used} / ${stats.hosting.ram_total}`}
+                value={
+                  liveMetrics
+                    ? `${(liveMetrics.ram_used_mb / 1024).toFixed(2)} GB / ${(
+                        liveMetrics.ram_total_mb / 1024
+                      ).toFixed(2)} GB`
+                    : `${stats.hosting.ram_used} / ${stats.hosting.ram_total}`
+                }
               />
               <DetailRow
                 label="Memory usage"
                 value={
-                  <span
-                    className={
-                      stats.hosting.ram_percent > 85
-                        ? "text-amber-500"
-                        : "text-foreground"
-                    }
-                  >
-                    {stats.hosting.ram_percent}%
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={
+                        (liveMetrics ? liveMetrics.ram_percent : stats.hosting.ram_percent) > 85
+                          ? "text-amber-500 font-bold"
+                          : "text-foreground font-medium"
+                      }
+                    >
+                      {liveMetrics ? liveMetrics.ram_percent : stats.hosting.ram_percent}%
+                    </span>
+                    <div className="w-24 h-2 bg-secondary rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-primary transition-all duration-500"
+                        style={{
+                          width: `${
+                            liveMetrics ? liveMetrics.ram_percent : stats.hosting.ram_percent
+                          }%`,
+                        }}
+                      />
+                    </div>
+                  </div>
                 }
               />
-              <DetailRow label="CPU load (1 min avg)" value={stats.hosting.cpu_load} mono />
+              <DetailRow
+                label="CPU load (1 min avg)"
+                value={liveMetrics ? String(liveMetrics.cpu_load) : stats.hosting.cpu_load}
+                mono
+              />
               <DetailRow label="Host uptime" value={stats.hosting.uptime} />
             </dl>
           </CardContent>

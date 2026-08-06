@@ -16,6 +16,7 @@ import Logs from "./pages/Logs";
 import Transcripts from "./pages/Transcripts";
 import Tickets from "./pages/Tickets";
 import Users from "./pages/Users";
+import { Groups } from "./pages/Groups";
 
 function Protected({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, loading } = useAuth();
@@ -112,6 +113,14 @@ export default function App() {
           element={
             <RequirePermission permission="users.view">
               <Users />
+            </RequirePermission>
+          }
+        />
+        <Route
+          path="groups"
+          element={
+            <RequirePermission permission="users.view">
+              <Groups />
             </RequirePermission>
           }
         />

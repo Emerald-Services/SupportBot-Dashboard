@@ -1,11 +1,12 @@
 import type {
+  DashboardGroup,
   DashboardPermissions,
   DashboardRole,
   DashboardUser,
   StoredDashboardUser,
 } from "@/lib/permissions";
 
-export type { DashboardUser, DashboardPermissions, StoredDashboardUser, DashboardRole };
+export type { DashboardUser, DashboardPermissions, StoredDashboardUser, DashboardRole, DashboardGroup };
 
 const REQUEST_TIMEOUT_MS = 25_000;
 
@@ -16,6 +17,11 @@ async function request<T>(
   const headers = new Headers(options.headers);
   if (!headers.has("Content-Type") && options.body) {
     headers.set("Content-Type", "application/json");
+  }
+
+  const impersonatedGroup = typeof window !== "undefined" ? sessionStorage.getItem("nexus_impersonate_group") : null;
+  if (impersonatedGroup && !headers.has("X-Impersonate-Group")) {
+    headers.set("X-Impersonate-Group", impersonatedGroup);
   }
 
   const controller = new AbortController();
@@ -343,6 +349,78 @@ export const api = {
       }>
     >("/api/system/tickets/open"),
 
+  getTicketMessages: (ticketId: string) =>
+    request<
+      ApiResponse<{
+        ticketId: string;
+        messages: {
+          id: string;
+          author: {
+            id: string;
+            username: string;
+            globalName: string;
+            avatar: string;
+            bot: boolean;
+            isDashboard?: boolean;
+          };
+          content: string;
+          embeds?: { title?: string; description?: string; color?: string | null }[];
+          attachments?: { id: string; name: string; url: string; contentType?: string }[];
+          createdAt: number;
+        }[];
+      }>
+    >(`/api/system/tickets/${encodeURIComponent(ticketId)}/messages`),
+
+  sendTicketReply: (
+    ticketId: string,
+    message: string,
+    staffName?: string,
+    attachments?: { filename: string; data: string }[],
+  ) =>
+    request<
+      ApiResponse<{
+        id: string;
+        author: {
+          id: string;
+          username: string;
+          globalName: string;
+          avatar: string;
+          bot: boolean;
+          isDashboard?: boolean;
+        };
+        content: string;
+        attachments?: { id: string; name: string; url: string; contentType?: string }[];
+        createdAt: number;
+      }>
+    >(`/api/system/tickets/${encodeURIComponent(ticketId)}/reply`, {
+      method: "POST",
+      body: JSON.stringify({ message, staffName, attachments }),
+    }),
+
+  deleteTicketMessage: (ticketId: string, messageId: string) =>
+    request<ApiResponse<unknown>>(
+      `/api/system/tickets/${encodeURIComponent(ticketId)}/messages/${encodeURIComponent(messageId)}`,
+      { method: "DELETE" },
+    ),
+
+  editTicketMessage: (ticketId: string, messageId: string, content: string) =>
+    request<ApiResponse<{ id: string; content: string }>>(
+      `/api/system/tickets/${encodeURIComponent(ticketId)}/messages/${encodeURIComponent(messageId)}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ content }),
+      },
+    ),
+
+  closeTicket: (ticketId: string, reason?: string) =>
+    request<ApiResponse<unknown>>(
+      `/api/system/tickets/${encodeURIComponent(ticketId)}/close`,
+      {
+        method: "POST",
+        body: JSON.stringify({ reason }),
+      },
+    ),
+
   getTranscript: (id: string) =>
     request<ApiResponse<string>>(`/api/system/transcripts/${id}`),
 
@@ -530,6 +608,45 @@ export const api = {
 
   removeDashboardUser: (id: string) =>
     request<ApiResponse<unknown>>(`/api/dashboard-users/${id}`, {
+      method: "DELETE",
+    }),
+
+  listGroups: () =>
+    request<
+      ApiResponse<{
+        groups: DashboardGroup[];
+      }>
+    >("/api/dashboard-groups"),
+
+  createGroup: (body: {
+    name: string;
+    description?: string;
+    color?: string;
+    discordRoleId?: string | null;
+    permissions?: Partial<DashboardPermissions>;
+  }) =>
+    request<ApiResponse<DashboardGroup>>("/api/dashboard-groups", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+
+  updateGroup: (
+    id: string,
+    body: {
+      name?: string;
+      description?: string;
+      color?: string;
+      discordRoleId?: string | null;
+      permissions?: Partial<DashboardPermissions>;
+    },
+  ) =>
+    request<ApiResponse<DashboardGroup>>(`/api/dashboard-groups/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }),
+
+  deleteGroup: (id: string) =>
+    request<ApiResponse<unknown>>(`/api/dashboard-groups/${id}`, {
       method: "DELETE",
     }),
 

@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatLogTime } from "@/lib/format-log-time";
 import { cn } from "@/lib/utils";
+import { useRealtimeStream, type StreamLogEntry } from "@/hooks/useRealtimeStream";
 
 const LOG_FILTERS: { id: LogType | "all"; label: string }[] = [
   { id: "all", label: "All" },
@@ -83,6 +84,24 @@ export default function Logs() {
     (): LogType[] => (filter === "all" ? ALL_TYPES : [filter]),
     [filter],
   );
+
+  const handleLogStream = useCallback(
+    (log: StreamLogEntry) => {
+      if (pausedRef.current) return;
+      if (filter !== "all" && log.type !== filter) return;
+
+      setEntries((prev) => {
+        const next = [...prev, log];
+        return next.length > MAX_LINES ? next.slice(next.length - MAX_LINES) : next;
+      });
+      setLive(true);
+    },
+    [filter]
+  );
+
+  useRealtimeStream({
+    onLog: handleLogStream,
+  });
 
   const fetchBatch = useCallback(
     async (reset: boolean) => {
