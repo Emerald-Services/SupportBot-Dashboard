@@ -38,8 +38,7 @@ export function AddonBuilder() {
     setLoading(true);
     setSuccess(false);
     try {
-      // NOTE: the endpoint isn't added to client.ts yet, we'll do that next
-      const res = await (api as any).buildAddon({
+      const res = await api.buildAddon({
         name: commandName.toLowerCase(),
         description: description || "A custom command",
         permission,

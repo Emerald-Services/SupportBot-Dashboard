@@ -1,8 +1,12 @@
 import type { ConfigField, ConfigSchema } from "@/lib/config-schemas";
 import { collectConfigFields } from "@/lib/generic-config-schema";
 
-function labelFromTopKey(key: string): string {
-  return key
+function sectionTitleFromPath(path: string): string {
+  if (path.startsWith("Ticket.DepartmentSystem.")) return "Ticket Departments";
+  if (path.startsWith("Ticket.PrioritySystem.")) return "Ticket Priorities";
+  if (path.startsWith("Ticket.")) return "Tickets";
+  const top = path.split(".")[0] ?? "Other";
+  return top
     .replace(/_/g, " ")
     .replace(/([a-z])([A-Z])/g, "$1 $2")
     .replace(/\b\w/g, (c) => c.toUpperCase());
@@ -18,22 +22,34 @@ export function mergeSchemaWithData(
 
   if (discovered.length === 0) return schema;
 
-  const byTop = new Map<string, ConfigField[]>();
+  const result: ConfigSchema = schema.map((sec) => ({
+    ...sec,
+    fields: [...sec.fields],
+  }));
+
+  const bySection = new Map<string, ConfigField[]>();
   for (const field of discovered) {
-    const top = field.path.split(".")[0] ?? "Other";
-    const list = byTop.get(top) ?? [];
+    const title = sectionTitleFromPath(field.path);
+    const list = bySection.get(title) ?? [];
     list.push(field);
-    byTop.set(top, list);
+    bySection.set(title, list);
   }
 
-  const extraSections = [...byTop.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([top, fields]) => ({
-      title: labelFromTopKey(top),
-      description:
-        "These options exist in your config file but are not in the main editor sections.",
-      fields: fields.sort((a, b) => a.path.localeCompare(b.path)),
-    }));
+  for (const [title, fields] of bySection.entries()) {
+    const existing = result.find(
+      (s) => s.title.toLowerCase() === title.toLowerCase()
+    );
 
-  return [...schema, ...extraSections];
+    if (existing) {
+      existing.fields.push(...fields);
+    } else {
+      result.push({
+        title,
+        description: "These options exist in your config file but are not in the main editor sections.",
+        fields: fields.sort((a, b) => a.path.localeCompare(b.path)),
+      });
+    }
+  }
+
+  return result;
 }

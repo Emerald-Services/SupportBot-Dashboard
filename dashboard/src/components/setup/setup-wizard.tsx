@@ -5,6 +5,7 @@ import {
   BotIcon,
   CheckmarkCircle02Icon,
   Copy01Icon,
+  Database01Icon,
   Key01Icon,
   Link01Icon,
   SecurityLockIcon,
@@ -22,6 +23,7 @@ import { cn } from "@/lib/utils";
 
 export const SETUP_STEP_IDS = [
   "botToken",
+  "database",
   "secretKey",
   "oauth",
   "redirectUri",
@@ -42,6 +44,12 @@ export const SETUP_STEPS: {
     title: "Bot token",
     subtitle: "Connect your Discord bot",
     icon: BotIcon,
+  },
+  {
+    id: "database",
+    title: "Database",
+    subtitle: "SQLite or MySQL engine",
+    icon: Database01Icon,
   },
   {
     id: "secretKey",
@@ -691,6 +699,145 @@ export function EmeraldApiKeyStep({
           onClick={onValidate}
         >
           {validating ? "Checking…" : (values.emeraldApiKey ? "Verify key" : "Skip step")}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+export function DatabaseStep({
+  values,
+  setValues,
+  validation,
+  validating,
+  onValidate,
+}: {
+  values: SetupFormValues;
+  setValues: React.Dispatch<React.SetStateAction<SetupFormValues>>;
+  validation: Record<string, FieldValidationResult>;
+  validating: boolean;
+  onValidate: () => void;
+}) {
+  const result = validation.database;
+  const isMysql = values.dbDriver === "mysql";
+
+  return (
+    <div className="flex flex-1 flex-col gap-6">
+      <p className="text-sm leading-relaxed text-muted-foreground">
+        Choose your database storage engine. Select <strong>SQLite</strong> for instant zero-config local storage, or <strong>MySQL / MariaDB</strong> for external host databases.
+      </p>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div
+          onClick={() => setValues((v) => ({ ...v, dbDriver: "sqlite" }))}
+          className={cn(
+            "cursor-pointer rounded-xl border p-4 transition-all hover:border-primary",
+            values.dbDriver === "sqlite"
+              ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+              : "border-border bg-card",
+          )}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="font-semibold text-foreground">SQLite</span>
+            <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-500">
+              Zero Config
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Single-file SQL database stored locally at <code className="font-mono">./Data/supportbot.db</code>. Zero extra setup required.
+          </p>
+        </div>
+
+        <div
+          onClick={() => setValues((v) => ({ ...v, dbDriver: "mysql" }))}
+          className={cn(
+            "cursor-pointer rounded-xl border p-4 transition-all hover:border-primary",
+            values.dbDriver === "mysql"
+              ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+              : "border-border bg-card",
+          )}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="font-semibold text-foreground">MySQL / MariaDB</span>
+            <span className="rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-medium text-blue-500">
+              External Database
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Connect to a remote or local MySQL database server.
+          </p>
+        </div>
+      </div>
+
+      {isMysql && (
+        <div className="space-y-4 rounded-xl border border-border bg-card/50 p-4">
+          <h4 className="text-sm font-semibold text-foreground">MySQL Connection Settings</h4>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="dbHost">Database Host</Label>
+              <Input
+                id="dbHost"
+                placeholder="127.0.0.1 or localhost"
+                value={values.dbHost}
+                onChange={(e) => setValues((v) => ({ ...v, dbHost: e.target.value }))}
+                className="h-11 text-sm"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="dbPort">Port</Label>
+              <Input
+                id="dbPort"
+                placeholder="3306"
+                value={values.dbPort}
+                onChange={(e) => setValues((v) => ({ ...v, dbPort: e.target.value }))}
+                className="h-11 text-sm font-mono"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="dbDatabase">Database Name</Label>
+              <Input
+                id="dbDatabase"
+                placeholder="supportbot"
+                value={values.dbDatabase}
+                onChange={(e) => setValues((v) => ({ ...v, dbDatabase: e.target.value }))}
+                className="h-11 text-sm"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="dbUser">Database User</Label>
+              <Input
+                id="dbUser"
+                placeholder="root"
+                value={values.dbUser}
+                onChange={(e) => setValues((v) => ({ ...v, dbUser: e.target.value }))}
+                className="h-11 text-sm font-mono"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="dbPassword">Password</Label>
+              <Input
+                id="dbPassword"
+                type="password"
+                placeholder="••••••••••••"
+                value={values.dbPassword}
+                onChange={(e) => setValues((v) => ({ ...v, dbPassword: e.target.value }))}
+                className="h-11 text-sm font-mono"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ValidationBanner result={result} />
+
+      <div className="mt-auto">
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={validating}
+          onClick={onValidate}
+        >
+          {validating ? "Testing Connection..." : "Test Connection & Validate"}
         </Button>
       </div>
     </div>

@@ -26,6 +26,7 @@ export interface DashboardPermissions {
   tickets: boolean;
   logs: boolean;
   transcripts: boolean;
+  rawYaml?: boolean;
   settings: { view: boolean; update: boolean };
   configs: Record<ConfigFile, ConfigFilePermission>;
   users: { view: boolean; manage: boolean };
@@ -97,6 +98,9 @@ export function hasPermission(
   if (key === "tickets") return permissions.tickets ?? permissions.overview;
   if (key === "logs") return permissions.logs;
   if (key === "transcripts") return permissions.transcripts;
+  if (key === "rawYaml" || key === "configs.raw_yaml" || key === "configs.rawYaml") {
+    return Boolean(permissions.rawYaml ?? (permissions.configs as unknown as Record<string, boolean>)?.rawYaml ?? false);
+  }
   if (key === "settings.view") return permissions.settings.view;
   if (key === "settings.update") return permissions.settings.update;
   if (key === "users.view") return permissions.users.view;
@@ -147,15 +151,19 @@ function configMap(view: boolean, edit: boolean): Record<ConfigFile, ConfigFileP
   );
 }
 
-export function fullPermissions(): DashboardPermissions {
+export function fullPermissions(
+  rawYaml: boolean = true,
+  userManage: boolean = true,
+): DashboardPermissions {
   return {
     overview: true,
     tickets: true,
     logs: true,
     transcripts: true,
+    rawYaml,
     settings: { view: true, update: true },
     configs: configMap(true, true),
-    users: { view: true, manage: true },
+    users: { view: true, manage: userManage },
   };
 }
 
@@ -165,14 +173,16 @@ export function defaultPermissionsForRole(
 ): DashboardPermissions {
   switch (role) {
     case "owner":
+      return fullPermissions(true, true);
     case "admin":
-      return fullPermissions();
+      return fullPermissions(false, false);
     case "moderator":
       return {
         overview: true,
         tickets: true,
         logs: true,
         transcripts: true,
+        rawYaml: false,
         settings: { view: true, update: false },
         configs: configMap(true, false),
         users: { view: false, manage: false },
@@ -183,6 +193,7 @@ export function defaultPermissionsForRole(
         tickets: true,
         logs: true,
         transcripts: false,
+        rawYaml: false,
         settings: { view: true, update: false },
         configs: configMap(true, true),
         users: { view: false, manage: false },
@@ -193,6 +204,7 @@ export function defaultPermissionsForRole(
         tickets: true,
         logs: true,
         transcripts: true,
+        rawYaml: false,
         settings: { view: true, update: false },
         configs: configMap(true, false),
         users: { view: false, manage: false },

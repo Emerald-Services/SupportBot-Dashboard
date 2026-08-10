@@ -57,6 +57,65 @@ export const supportbotSchema: ConfigSchema = [
     ],
   },
   {
+    title: "Database",
+    fields: [
+      {
+        path: "Database.Driver",
+        label: "Database Engine",
+        type: "select",
+        options: [
+          { value: "sqlite", label: "SQLite (Local File)" },
+          { value: "mysql", label: "MySQL / MariaDB" },
+        ],
+        description: "Select SQLite for zero-config file storage, or MySQL for external host servers.",
+      },
+      {
+        path: "Database.MySQL.Host",
+        label: "MySQL Host",
+        type: "text",
+        placeholder: "127.0.0.1 or localhost",
+        description: "Hostname or IP address of your MySQL database server.",
+      },
+      {
+        path: "Database.MySQL.Port",
+        label: "MySQL Port",
+        type: "number",
+        placeholder: "3306",
+      },
+      {
+        path: "Database.MySQL.Database",
+        label: "Database Name",
+        type: "text",
+        placeholder: "supportbot",
+      },
+      {
+        path: "Database.MySQL.User",
+        label: "Database User",
+        type: "text",
+        placeholder: "root",
+      },
+      {
+        path: "Database.MySQL.Password",
+        label: "Database Password",
+        type: "secret",
+        placeholder: "••••••••••••",
+      },
+      {
+        path: "Database.MySQL.ConnectionLimit",
+        label: "Connection Pool Limit",
+        type: "number",
+        placeholder: "10",
+        description: "Maximum simultaneous connections in the MySQL pool (default 10).",
+      },
+      {
+        path: "Database.SQLite.File",
+        label: "SQLite Database File Path",
+        type: "text",
+        placeholder: "./Data/supportbot.db",
+      },
+    ],
+  },
+  {
     title: "Activity",
     fields: [
       { path: "Activity.Status", label: "Status text", type: "text" },
@@ -383,6 +442,22 @@ export const supportbotSchema: ConfigSchema = [
         type: "textarea",
       },
       {
+        path: "Ticket.Questions.Enabled",
+        label: "Ticket questions",
+        type: "boolean",
+      },
+      {
+        path: "Ticket.Questions.List",
+        label: "Default questions",
+        type: "stringList",
+      },
+    ],
+  },
+  {
+    title: "Ticket Departments",
+    description: "Configure ticket department channels, emojis, staff roles, and custom department questions.",
+    fields: [
+      {
         path: "Ticket.DepartmentSystem.Enabled",
         label: "Departments enabled",
         type: "boolean",
@@ -397,6 +472,12 @@ export const supportbotSchema: ConfigSchema = [
         label: "Default department key",
         type: "text",
       },
+    ],
+  },
+  {
+    title: "Ticket Priorities",
+    description: "Configure ticket priority levels and emojis.",
+    fields: [
       {
         path: "Ticket.PrioritySystem.Enabled",
         label: "Priority system",
@@ -411,16 +492,6 @@ export const supportbotSchema: ConfigSchema = [
         path: "Ticket.PrioritySystem.AllowUsersToChooseOnOpen",
         label: "User picks priority on open",
         type: "boolean",
-      },
-      {
-        path: "Ticket.Questions.Enabled",
-        label: "Ticket questions",
-        type: "boolean",
-      },
-      {
-        path: "Ticket.Questions.List",
-        label: "Default questions",
-        type: "stringList",
       },
     ],
   },

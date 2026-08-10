@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import type { IconSvgElement } from "@hugeicons/react";
 import {
   AiBrain01Icon,
@@ -18,6 +19,7 @@ import {
 import { NavLink, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useBranding } from "@/context/BrandingContext";
+import { api, type GuildResources } from "@/api/client";
 import { useBotStats } from "@/context/BotStatsContext";
 import { useAddonConfigs } from "@/hooks/use-addon-configs";
 import {
@@ -145,9 +147,27 @@ export function AppSidebar() {
     ? [...visibleSections, addonSection]
     : visibleSections;
 
-  const serverLabel = stats
-    ? `${stats.servers} server${stats.servers === 1 ? "" : "s"}`
-    : "Your server";
+  const [guildResources, setGuildResources] = useState<GuildResources | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .getGuildResources()
+      .then((res) => {
+        if (!cancelled && res.data) {
+          setGuildResources(res.data);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const serverName =
+    guildResources?.guildName ||
+    (stats ? `${stats.servers} Server${stats.servers === 1 ? "" : "s"}` : "Connected Guild");
+  const serverIcon = guildResources?.guildIcon;
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
@@ -171,17 +191,31 @@ export function AppSidebar() {
               variant="outline"
               className="h-10 w-full justify-between border-border bg-secondary/40 px-3 font-normal hover:bg-secondary/60"
             >
-              <span className="flex items-center gap-2 truncate">
-                <Icon icon={PlusSignIcon} size={16} className="text-muted-foreground" />
-                <span className="truncate">{serverLabel}</span>
+              <span className="flex items-center gap-2 truncate min-w-0">
+                {serverIcon ? (
+                  <img
+                    src={serverIcon}
+                    alt=""
+                    className="size-5 rounded-full object-cover shrink-0"
+                  />
+                ) : (
+                  <div className="size-5 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-bold shrink-0">
+                    {serverName.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <span className="truncate text-xs font-semibold text-foreground">
+                  {serverName}
+                </span>
               </span>
-              <Icon icon={ArrowDown01Icon} size={16} className="text-muted-foreground" />
+              <Icon icon={ArrowDown01Icon} size={14} className="text-muted-foreground shrink-0 ml-1" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
-            <DropdownMenuItem disabled>Connected via API</DropdownMenuItem>
+            <DropdownMenuItem disabled className="text-xs font-medium">
+              Connected Guild: {serverName}
+            </DropdownMenuItem>
             {stats ? (
-              <DropdownMenuItem disabled>
+              <DropdownMenuItem disabled className="text-xs text-muted-foreground">
                 {stats.users.toLocaleString()} members tracked
               </DropdownMenuItem>
             ) : null}

@@ -5,6 +5,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   BotTokenStep,
+  DatabaseStep,
   OAuthStep,
   OwnersStep,
   RedirectStep,
@@ -38,6 +39,7 @@ function parseOwnerIds(raw: string) {
 function validationKeyForStep(id: SetupStepId): string {
   if (id === "oauth") return "oauth";
   if (id === "owners") return "owners";
+  if (id === "database") return "database";
   if (id === "emeraldApi") return "emeraldApi";
   return id;
 }
@@ -50,6 +52,12 @@ export default function Setup() {
   const [stepIndex, setStepIndex] = useState(0);
   const [values, setValues] = useState<SetupFormValues>({
     botToken: "",
+    dbDriver: "sqlite",
+    dbHost: "127.0.0.1",
+    dbPort: "3306",
+    dbUser: "",
+    dbPassword: "",
+    dbDatabase: "supportbot",
     secretKey: "",
     clientId: "",
     clientSecret: "",
@@ -74,6 +82,12 @@ export default function Setup() {
   const payload = useMemo(
     () => ({
       botToken: values.botToken,
+      dbDriver: values.dbDriver,
+      dbHost: values.dbHost,
+      dbPort: values.dbPort,
+      dbUser: values.dbUser,
+      dbPassword: values.dbPassword,
+      dbDatabase: values.dbDatabase,
       secretKey: values.secretKey,
       clientId: values.clientId,
       clientSecret: values.clientSecret,
@@ -145,6 +159,13 @@ export default function Setup() {
       case "botToken":
         return (
           <BotTokenStep
+            {...common}
+            onValidate={() => void validateCurrentStep()}
+          />
+        );
+      case "database":
+        return (
+          <DatabaseStep
             {...common}
             onValidate={() => void validateCurrentStep()}
           />

@@ -93,7 +93,7 @@ function PermissionEditor({
   const set = (patch: Partial<DashboardPermissions>) =>
     onChange({ ...permissions, ...patch });
 
-  const PERM_ITEMS: {
+  const MODULE_ITEMS: {
     key: "overview" | "tickets" | "logs" | "transcripts";
     title: string;
     description: string;
@@ -105,17 +105,17 @@ function PermissionEditor({
     },
     {
       key: "tickets",
-      title: "Tickets",
+      title: "Support Tickets",
       description: "View open support tickets, live web chat, send staff replies, and close tickets.",
     },
     {
       key: "transcripts",
-      title: "Transcripts",
+      title: "Ticket Transcripts",
       description: "Access saved ticket HTML transcripts and configure public transcript options.",
     },
     {
       key: "logs",
-      title: "Console Logs",
+      title: "Console Terminal Logs",
       description: "View real-time bot terminal output, system logs, and runtime error traces.",
     },
   ];
@@ -130,12 +130,13 @@ function PermissionEditor({
 
   return (
     <div className="space-y-6">
+      {/* Category 1: General & Modules */}
       <div className="space-y-2.5">
         <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          General Capabilities
+          General & Modules Access
         </h4>
         <div className="grid gap-2.5">
-          {PERM_ITEMS.map(({ key, title, description }) => (
+          {MODULE_ITEMS.map(({ key, title, description }) => (
             <label
               key={key}
               className="flex items-center justify-between gap-4 rounded-xl border border-border bg-secondary/20 p-3 transition-colors hover:bg-secondary/40"
@@ -152,7 +153,15 @@ function PermissionEditor({
               />
             </label>
           ))}
+        </div>
+      </div>
 
+      {/* Category 2: Administration & System Settings */}
+      <div className="space-y-2.5">
+        <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Administration & Settings
+        </h4>
+        <div className="grid gap-2.5">
           {/* Settings View */}
           <label className="flex items-center justify-between gap-4 rounded-xl border border-border bg-secondary/20 p-3 transition-colors hover:bg-secondary/40">
             <div className="space-y-0.5 min-w-0">
@@ -219,6 +228,7 @@ function PermissionEditor({
         </div>
       </div>
 
+      {/* Category 3: Configuration Files Access */}
       <div className="space-y-2.5">
         <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Configuration Files Access
@@ -273,6 +283,26 @@ function PermissionEditor({
               </div>
             );
           })}
+
+          {/* Raw YAML Code Editor */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-border bg-secondary/20 p-3 transition-colors hover:bg-secondary/40">
+            <div className="space-y-0.5 min-w-0">
+              <p className="text-sm font-semibold text-foreground">Raw YAML Code Editor</p>
+              <p className="text-xs text-muted-foreground leading-snug">
+                Access the raw YAML code editor tab to view or edit full raw configuration files.
+              </p>
+            </div>
+            <div className="flex items-center gap-4 shrink-0">
+              <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground cursor-pointer">
+                <span>Access</span>
+                <Switch
+                  checked={permissions.rawYaml ?? false}
+                  disabled={disabled}
+                  onCheckedChange={(rawYaml) => set({ rawYaml })}
+                />
+              </label>
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -30,6 +30,12 @@ export interface SetupValidateResponse {
 
 export interface SetupFormValues {
   botToken: string;
+  dbDriver: "sqlite" | "mysql";
+  dbHost: string;
+  dbPort: string;
+  dbUser: string;
+  dbPassword: string;
+  dbDatabase: string;
   secretKey: string;
   clientId: string;
   clientSecret: string;

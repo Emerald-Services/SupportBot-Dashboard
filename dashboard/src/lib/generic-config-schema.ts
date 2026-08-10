@@ -14,6 +14,7 @@ function inferFieldType(key: string, value: unknown): FieldType {
 
   if (typeof value === "string") {
     const k = key.toLowerCase();
+    if (/prefix/.test(k)) return "text";
     if (/emoji/.test(k)) return "emoji";
     if (/guild.?id|guild_id/.test(k)) return "discordId";
     if (/category/.test(k)) return "discordCategory";

@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { AlertCircleIcon, FloppyDiskIcon } from "@hugeicons/core-free-icons";
+import { AlertCircleIcon, FloppyDiskIcon, Add01Icon, Delete02Icon } from "@hugeicons/core-free-icons";
 import { api, maskConfigSecrets } from "@/api/client";
 import { Icon } from "@/components/icon";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
@@ -12,6 +14,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getSchema, type ConfigSchema } from "@/lib/config-schemas";
 import { getByPath, setByPath } from "@/lib/config-utils";
@@ -23,6 +33,8 @@ import { Textarea } from "@/components/ui/textarea";
 import Editor from "@monaco-editor/react";
 import { ConfigFieldInput } from "./config-field";
 import { CommandsEditor } from "./commands-editor";
+
+import { hasPermission } from "@/lib/permissions";
 
 type EditorMode = "visual" | "yaml";
 
@@ -79,8 +91,94 @@ function buildUpdates(
   return updates;
 }
 
+interface GroupedFields {
+  standalone: ConfigField[];
+  groups: { key: string; name: string; fields: ConfigField[] }[];
+}
+
+function getGroupedSectionFields(
+  fields: ConfigField[],
+  data: Record<string, unknown> | null
+): GroupedFields {
+  const subGroupMap = new Map<string, ConfigField[]>();
+  const standalone: ConfigField[] = [];
+
+  for (const field of fields) {
+    const parts = field.path.split(".");
+    if (parts.length >= 5 && parts[1] === "DepartmentSystem" && parts[2] === "Departments") {
+      const groupKey = parts[3];
+      const list = subGroupMap.get(groupKey) ?? [];
+      list.push(field);
+      subGroupMap.set(groupKey, list);
+    } else if (parts.length >= 3) {
+      const groupKey = parts[1];
+      const list = subGroupMap.get(groupKey) ?? [];
+      list.push(field);
+      subGroupMap.set(groupKey, list);
+    } else {
+      standalone.push(field);
+    }
+  }
+
+  if (subGroupMap.size === 0) {
+    return { standalone: fields, groups: [] };
+  }
+
+  const groups = [...subGroupMap.entries()].map(([groupKey, groupFields]) => {
+    const fieldOrder = [
+      "enabled",
+      "name",
+      "description",
+      "emoji",
+      "category",
+      "role",
+      "channelprefix",
+      "defaultpriority",
+      "questions",
+    ];
+
+    groupFields.sort((a, b) => {
+      const aKey = a.path.split(".").pop()?.toLowerCase() || "";
+      const bKey = b.path.split(".").pop()?.toLowerCase() || "";
+      const aIdx = fieldOrder.indexOf(aKey);
+      const bIdx = fieldOrder.indexOf(bKey);
+      if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
+      if (aIdx !== -1) return -1;
+      if (bIdx !== -1) return 1;
+      return aKey.localeCompare(bKey);
+    });
+
+    const nameField = groupFields.find(
+      (f) => f.path.toLowerCase().endsWith(".name") || f.path.toLowerCase().endsWith(".title")
+    );
+    let displayName = "";
+    if (nameField && data) {
+      const val = getByPath(data, nameField.path);
+      if (typeof val === "string" && val.trim()) {
+        displayName = val.trim();
+      }
+    }
+
+    if (!displayName) {
+      displayName = groupKey
+        .replace(/_/g, " ")
+        .replace(/([a-z])([A-Z])/g, "$1 $2")
+        .replace(/\b\w/g, (c) => c.toUpperCase());
+    }
+
+    return {
+      key: groupKey,
+      name: displayName,
+      fields: groupFields,
+    };
+  });
+
+  return { standalone, groups };
+}
+
 export function ConfigVisualEditor({ configFile }: ConfigVisualEditorProps) {
-  const { canEditConfig } = useAuth();
+  const { permissions: effectivePermissions, canEditConfig } = useAuth();
+  const canRawYaml = hasPermission(effectivePermissions, "configs.raw_yaml");
   const readOnly = !canEditConfig(configFile);
   const [data, setData] = useState<Record<string, unknown> | null>(null);
   const [original, setOriginal] = useState<Record<string, unknown> | null>(
@@ -91,12 +189,60 @@ export function ConfigVisualEditor({ configFile }: ConfigVisualEditorProps) {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [mode, setMode] = useState<EditorMode>("visual");
+
+  useEffect(() => {
+    if (!canRawYaml && mode === "yaml") {
+      setMode("visual");
+    }
+  }, [canRawYaml, mode]);
   const [rawYaml, setRawYaml] = useState("");
   const [rawOriginal, setRawOriginal] = useState("");
   const [searchParams] = useSearchParams();
   const [activeSectionTitle, setActiveSectionTitle] = useState<string | null>(
     () => searchParams.get("tab") || null
   );
+
+  const [addDeptOpen, setAddDeptOpen] = useState(false);
+  const [newDeptKey, setNewDeptKey] = useState("");
+  const [newDeptName, setNewDeptName] = useState("");
+
+  const handleCreateDepartment = () => {
+    const key = newDeptKey.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "");
+    if (!key || !data) return;
+    const name = newDeptName.trim() || key;
+    const prefix = `Ticket.DepartmentSystem.Departments.${key}`;
+    const next = { ...data };
+    setByPath(next, `${prefix}.Name`, name);
+    setByPath(next, `${prefix}.Description`, `Open a ${name} ticket`);
+    setByPath(next, `${prefix}.Emoji`, "🎫");
+    setByPath(next, `${prefix}.Category`, "CATEGORY_ID");
+    setByPath(next, `${prefix}.Role`, "ROLE_ID");
+    setByPath(next, `${prefix}.ChannelPrefix`, `${key}-`);
+    setByPath(next, `${prefix}.DefaultPriority`, "normal");
+    setByPath(next, `${prefix}.Questions`, ["What do you need assistance with?"]);
+    setData(next);
+    setAddDeptOpen(false);
+    setNewDeptKey("");
+    setNewDeptName("");
+  };
+
+  const handleDeleteDepartment = (deptKey: string) => {
+    if (!data) return;
+    const prefix = `Ticket.DepartmentSystem.Departments.${deptKey}`;
+    const next = JSON.parse(JSON.stringify(data));
+    Object.keys(next).forEach((k) => {
+      if (k.startsWith(prefix) || k === prefix) {
+        delete next[k];
+      }
+    });
+    if (next.Ticket && typeof next.Ticket === "object") {
+      const deptSys = (next.Ticket as any).DepartmentSystem;
+      if (deptSys && typeof deptSys === "object" && deptSys.Departments && typeof deptSys.Departments === "object") {
+        delete deptSys.Departments[deptKey];
+      }
+    }
+    setData(next);
+  };
 
   const baseSchema = getSchema(configFile);
 
@@ -252,26 +398,28 @@ export function ConfigVisualEditor({ configFile }: ConfigVisualEditorProps) {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex rounded-lg border border-border p-0.5">
-          <Button
-            type="button"
-            variant={mode === "visual" ? "secondary" : "ghost"}
-            size="sm"
-            className="h-8"
-            onClick={() => setMode("visual")}
-          >
-            Visual
-          </Button>
-          <Button
-            type="button"
-            variant={mode === "yaml" ? "secondary" : "ghost"}
-            size="sm"
-            className="h-8"
-            onClick={() => setMode("yaml")}
-          >
-            YAML
-          </Button>
-        </div>
+        {canRawYaml ? (
+          <div className="flex rounded-lg border border-border p-0.5">
+            <Button
+              type="button"
+              variant={mode === "visual" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-8"
+              onClick={() => setMode("visual")}
+            >
+              Visual
+            </Button>
+            <Button
+              type="button"
+              variant={mode === "yaml" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-8"
+              onClick={() => setMode("yaml")}
+            >
+              YAML
+            </Button>
+          </div>
+        ) : null}
         <div className="flex flex-wrap items-center gap-2">
         {dirty ? (
           <span className="text-xs text-amber-500">Unsaved changes</span>
@@ -363,36 +511,151 @@ export function ConfigVisualEditor({ configFile }: ConfigVisualEditorProps) {
               .filter((section) => section.title === activeSectionTitle)
               .map((section) => (
                 <Card key={section.title} className="border-border bg-card">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base">{section.title}</CardTitle>
-                    {section.description ? (
-                      <CardDescription>{section.description}</CardDescription>
-                    ) : null}
-                  </CardHeader>
-                  <CardContent className="grid gap-4 sm:grid-cols-2">
-                    {section.fields.map((field) => (
-                      <div
-                        key={field.path}
-                        className={
-                          field.type === "textarea" || field.type === "stringList"
-                            ? "sm:col-span-2"
-                            : ""
-                        }
+                  <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                    <div>
+                      <CardTitle className="text-base">{section.title}</CardTitle>
+                      {section.description ? (
+                        <CardDescription>{section.description}</CardDescription>
+                      ) : null}
+                    </div>
+                    {section.title === "Ticket Departments" && !readOnly && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setAddDeptOpen(true)}
+                        className="gap-1.5 text-xs h-8 shrink-0"
                       >
-                        <ConfigFieldInput
-                          field={field}
-                          value={getByPath(data, field.path)}
-                          readOnly={readOnly}
-                          onChange={(v) => patch(field.path, v)}
-                        />
-                      </div>
-                    ))}
+                        <Icon icon={Add01Icon} size={14} /> Add Department
+                      </Button>
+                    )}
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {(() => {
+                      const { standalone, groups } = getGroupedSectionFields(section.fields, data);
+
+                      return (
+                        <>
+                          {standalone.length > 0 && (
+                            <div className="grid gap-4 sm:grid-cols-2">
+                              {standalone.map((field) => (
+                                <div
+                                  key={field.path}
+                                  className={
+                                    field.type === "textarea" || field.type === "stringList"
+                                      ? "sm:col-span-2"
+                                      : ""
+                                  }
+                                >
+                                  <ConfigFieldInput
+                                    field={field}
+                                    value={getByPath(data, field.path)}
+                                    readOnly={readOnly}
+                                    onChange={(v) => patch(field.path, v)}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {groups.map((group) => (
+                            <div
+                              key={group.key}
+                              className="rounded-xl border border-border bg-card/60 p-4 space-y-4 shadow-sm transition-all hover:border-primary/40"
+                            >
+                              <div className="flex items-center justify-between border-b border-border/60 pb-3">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-semibold text-base text-foreground">
+                                    {group.name}
+                                  </span>
+                                  <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 font-medium">
+                                    {section.title === "Ticket Departments" ? `Ticket.${group.key}` : group.key}
+                                  </span>
+                                </div>
+                                {section.title === "Ticket Departments" && group.key !== "DepartmentSystem" && !readOnly && (
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => handleDeleteDepartment(group.key)}
+                                    className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                                    title="Delete Department"
+                                  >
+                                    <Icon icon={Delete02Icon} size={14} />
+                                  </Button>
+                                )}
+                              </div>
+                              <div className="grid gap-4 sm:grid-cols-2">
+                                {group.fields.map((field) => (
+                                  <div
+                                    key={field.path}
+                                    className={
+                                      field.type === "textarea" || field.type === "stringList"
+                                        ? "sm:col-span-2"
+                                        : ""
+                                    }
+                                  >
+                                    <ConfigFieldInput
+                                      field={field}
+                                      value={getByPath(data, field.path)}
+                                      readOnly={readOnly}
+                                      onChange={(v) => patch(field.path, v)}
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </>
+                      );
+                    })()}
                   </CardContent>
                 </Card>
               ))}
           </div>
         </div>
       ) : null}
+
+      {/* Add Department Modal */}
+      <Dialog open={addDeptOpen} onOpenChange={setAddDeptOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="text-base">Add Ticket Department</DialogTitle>
+            <DialogDescription className="text-xs">
+              Create a new support department for ticket creation.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold">Department Key (Internal ID)</Label>
+              <Input
+                placeholder="billing"
+                value={newDeptKey}
+                onChange={(e) => setNewDeptKey(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ""))}
+                className="text-xs font-mono border-border bg-secondary/30"
+              />
+              <p className="text-[11px] text-muted-foreground">e.g. <code>billing</code>, <code>technical</code>, <code>sales</code></p>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold">Department Display Name</Label>
+              <Input
+                placeholder="Billing & Sales Support"
+                value={newDeptName}
+                onChange={(e) => setNewDeptName(e.target.value)}
+                className="text-xs border-border bg-secondary/30"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" size="sm" onClick={() => setAddDeptOpen(false)} className="text-xs">
+              Cancel
+            </Button>
+            <Button size="sm" onClick={handleCreateDepartment} disabled={!newDeptKey.trim()} className="text-xs bg-primary font-semibold">
+              Create Department
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

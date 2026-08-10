@@ -184,6 +184,7 @@ export interface GuildEmojiResource {
 export interface GuildResources {
   guildId: string;
   guildName: string;
+  guildIcon?: string | null;
   roles: { id: string; name: string; color: string | null }[];
   channels: { id: string; name: string; type: number }[];
   categories: { id: string; name: string }[];
@@ -348,6 +349,12 @@ export const api = {
         }[];
       }>
     >("/api/system/tickets/open"),
+
+  createTicket: (data: { department?: string; subject?: string; reason?: string; userId?: string }) =>
+    request<ApiResponse<{ message: string }>>("/api/system/tickets/create", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
 
   getTicketMessages: (ticketId: string) =>
     request<

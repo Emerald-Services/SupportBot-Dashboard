@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
-import { api } from "@/api/client";
+import { Search01Icon, UnfoldMoreIcon } from "@hugeicons/core-free-icons";
+import { api, type GuildResources } from "@/api/client";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Icon } from "@/components/icon";
+import { cn } from "@/lib/utils";
 
 export type DiscordResourceKind = "channel" | "role" | "category";
 
@@ -22,8 +24,6 @@ interface DiscordResourcePickerProps {
   readOnly?: boolean;
 }
 
-import type { GuildResources } from "@/api/client";
-
 export function DiscordResourcePicker({
   id,
   label,
@@ -36,6 +36,8 @@ export function DiscordResourcePicker({
   const [resources, setResources] = useState<GuildResources | null>(null);
   const [loadError, setLoadError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -74,6 +76,14 @@ export function DiscordResourcePicker({
   const current = String(value ?? "");
   const matched = options.find((o) => o.id === current);
 
+  const filteredOptions = useMemo(() => {
+    if (!search.trim()) return options;
+    const q = search.toLowerCase().trim();
+    return options.filter(
+      (opt) => opt.name.toLowerCase().includes(q) || opt.id.includes(q),
+    );
+  }, [options, search]);
+
   return (
     <div className="space-y-2">
       <Label htmlFor={id}>{label}</Label>
@@ -82,31 +92,77 @@ export function DiscordResourcePicker({
       ) : null}
 
       {resources ? (
-        <Select
-          value={matched ? current : ""}
-          disabled={readOnly || loading}
-          onValueChange={(next) => onChange(next)}
-        >
-          <SelectTrigger id={id} className="border-border bg-secondary/30">
-            <SelectValue
-              placeholder={
-                loading
-                  ? "Loading…"
-                  : `Select ${kind} from ${resources.guildName}…`
-              }
-            />
-          </SelectTrigger>
-          <SelectContent className="max-h-64">
-            {options.map((opt) => (
-              <SelectItem key={opt.id} value={opt.id}>
-                {opt.name}
-                <span className="ml-2 font-mono text-xs text-muted-foreground">
-                  {opt.id}
-                </span>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              id={id}
+              type="button"
+              variant="outline"
+              role="combobox"
+              aria-expanded={open}
+              disabled={readOnly || loading}
+              className="w-full justify-between border-border bg-secondary/30 text-left font-normal h-10 px-3 hover:bg-secondary/50"
+            >
+              <span className="truncate">
+                {matched ? (
+                  <span className="flex items-center gap-2 min-w-0">
+                    <span className="font-medium text-foreground truncate">{matched.name}</span>
+                    <span className="font-mono text-[11px] text-muted-foreground shrink-0">{matched.id}</span>
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground">
+                    {loading
+                      ? "Loading server list…"
+                      : `Select ${kind} from ${resources.guildName}…`}
+                  </span>
+                )}
+              </span>
+              <Icon icon={UnfoldMoreIcon} size={16} className="shrink-0 opacity-50 ml-2" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-2 bg-popover border-border shadow-2xl rounded-xl flex flex-col gap-2 z-50">
+            <div className="relative flex items-center">
+              <Icon icon={Search01Icon} size={14} className="absolute left-2.5 text-muted-foreground" />
+              <Input
+                placeholder={`Search ${kind}s by name or ID…`}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="h-8 pl-8 text-xs border-border bg-secondary/20 focus-visible:ring-1"
+                autoFocus
+              />
+            </div>
+            <div className="overflow-y-auto max-h-56 space-y-1 pr-1">
+              {filteredOptions.length === 0 ? (
+                <div className="p-3 text-center text-xs text-muted-foreground">
+                  No {kind}s found matching "{search}"
+                </div>
+              ) : (
+                filteredOptions.map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => {
+                      onChange(opt.id);
+                      setOpen(false);
+                      setSearch("");
+                    }}
+                    className={cn(
+                      "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors text-left",
+                      opt.id === current
+                        ? "bg-primary/15 text-primary font-semibold border border-primary/20"
+                        : "hover:bg-secondary/60 text-foreground"
+                    )}
+                  >
+                    <span className="truncate mr-2 font-medium">{opt.name}</span>
+                    <span className="font-mono text-[11px] text-muted-foreground shrink-0">
+                      {opt.id}
+                    </span>
+                  </button>
+                ))
+              )}
+            </div>
+          </PopoverContent>
+        </Popover>
       ) : null}
 
       <Input
@@ -120,7 +176,7 @@ export function DiscordResourcePicker({
               ? "Category ID"
               : "Channel ID"
         }
-        className="border-border bg-secondary/30 font-mono text-sm"
+        className="border-border bg-secondary/30 font-mono text-xs"
       />
 
       {loadError ? (

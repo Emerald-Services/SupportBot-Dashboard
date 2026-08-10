@@ -10,7 +10,8 @@ import {
 import { api } from "@/api/client";
 import { useAuth } from "@/context/AuthContext";
 import type { DashboardGroup, DashboardPermissions } from "@/lib/permissions";
-import { defaultPermissionsForRole } from "@/lib/permissions";
+import { defaultPermissionsForRole, hasPermission } from "@/lib/permissions";
+import { DiscordResourcePicker } from "@/components/config/discord-resource-picker";
 import { Icon } from "@/components/icon";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -57,7 +58,7 @@ function PermissionEditor({
   const set = (patch: Partial<DashboardPermissions>) =>
     onChange({ ...permissions, ...patch });
 
-  const PERM_ITEMS: {
+  const MODULE_ITEMS: {
     key: "overview" | "tickets" | "logs" | "transcripts";
     title: string;
     description: string;
@@ -69,17 +70,17 @@ function PermissionEditor({
     },
     {
       key: "tickets",
-      title: "Tickets",
+      title: "Support Tickets",
       description: "View open support tickets, live web chat, send staff replies, and close tickets.",
     },
     {
       key: "transcripts",
-      title: "Transcripts",
+      title: "Ticket Transcripts",
       description: "Access saved ticket HTML transcripts and configure public transcript options.",
     },
     {
       key: "logs",
-      title: "Console Logs",
+      title: "Console Terminal Logs",
       description: "View real-time bot terminal output, system logs, and runtime error traces.",
     },
   ];
@@ -94,12 +95,13 @@ function PermissionEditor({
 
   return (
     <div className="space-y-6">
+      {/* Category 1: General & Modules */}
       <div className="space-y-2.5">
         <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          General Capabilities
+          General & Modules Access
         </h4>
         <div className="grid gap-2.5">
-          {PERM_ITEMS.map(({ key, title, description }) => (
+          {MODULE_ITEMS.map(({ key, title, description }) => (
             <label
               key={key}
               className="flex items-center justify-between gap-4 rounded-xl border border-border bg-secondary/20 p-3 transition-colors hover:bg-secondary/40"
@@ -116,7 +118,15 @@ function PermissionEditor({
               />
             </label>
           ))}
+        </div>
+      </div>
 
+      {/* Category 2: Administration & System Settings */}
+      <div className="space-y-2.5">
+        <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Administration & Settings
+        </h4>
+        <div className="grid gap-2.5">
           {/* Settings View */}
           <label className="flex items-center justify-between gap-4 rounded-xl border border-border bg-secondary/20 p-3 transition-colors hover:bg-secondary/40">
             <div className="space-y-0.5 min-w-0">
@@ -183,6 +193,7 @@ function PermissionEditor({
         </div>
       </div>
 
+      {/* Category 3: Configuration Files Access */}
       <div className="space-y-2.5">
         <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Configuration Files Access
@@ -237,6 +248,26 @@ function PermissionEditor({
               </div>
             );
           })}
+
+          {/* Raw YAML Code Editor */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-border bg-secondary/20 p-3 transition-colors hover:bg-secondary/40">
+            <div className="space-y-0.5 min-w-0">
+              <p className="text-sm font-semibold text-foreground">Raw YAML Code Editor</p>
+              <p className="text-xs text-muted-foreground leading-snug">
+                Access the raw YAML code editor tab to view or edit full raw configuration files.
+              </p>
+            </div>
+            <div className="flex items-center gap-4 shrink-0">
+              <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground cursor-pointer">
+                <span>Access</span>
+                <Switch
+                  checked={permissions.rawYaml ?? false}
+                  disabled={disabled}
+                  onCheckedChange={(rawYaml) => set({ rawYaml })}
+                />
+              </label>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -244,7 +275,8 @@ function PermissionEditor({
 }
 
 export function Groups() {
-  const { impersonateGroup, impersonatedGroup, stopImpersonation } = useAuth();
+  const { permissions: userPermissions, impersonateGroup, impersonatedGroup, stopImpersonation } = useAuth();
+  const canManage = hasPermission(userPermissions, "users.manage");
   const [groups, setGroups] = useState<DashboardGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -366,10 +398,12 @@ export function Groups() {
             Create custom permission groups, assign staff members, and optionally sync with Discord Role IDs.
           </p>
         </div>
-        <Button onClick={openAddDialog} className="shrink-0 gap-2 bg-primary">
-          <Icon icon={Add01Icon} size={18} />
-          Create Group
-        </Button>
+        {canManage && (
+          <Button onClick={openAddDialog} className="shrink-0 gap-2 bg-primary">
+            <Icon icon={Add01Icon} size={18} />
+            Create Group
+          </Button>
+        )}
       </div>
 
       {/* Alerts */}
@@ -505,27 +539,27 @@ export function Groups() {
                             {impersonatedGroup?.id === group.id ? "Active Preview" : "View as Group"}
                           </Button>
 
-                          {!group.isSystem && (
-                            <>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-7 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
-                                onClick={() => openEditDialog(group)}
-                              >
-                                <Icon icon={PencilEdit01Icon} size={13} />
-                                Edit
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-7 px-2 text-xs gap-1 text-muted-foreground hover:text-destructive"
-                                onClick={() => handleDeleteGroup(group)}
-                              >
-                                <Icon icon={Delete02Icon} size={13} />
-                                Delete
-                              </Button>
-                            </>
+                          {canManage && group.id !== "owner" && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
+                              onClick={() => openEditDialog(group)}
+                            >
+                              <Icon icon={PencilEdit01Icon} size={13} />
+                              Edit
+                            </Button>
+                          )}
+                          {canManage && !group.isSystem && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 px-2 text-xs gap-1 text-muted-foreground hover:text-destructive"
+                              onClick={() => handleDeleteGroup(group)}
+                            >
+                              <Icon icon={Delete02Icon} size={13} />
+                              Delete
+                            </Button>
                           )}
                         </div>
                       </td>
@@ -598,18 +632,14 @@ export function Groups() {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="discord-role-id">Discord Role ID (Optional Auto-Sync)</Label>
-              <Input
-                id="discord-role-id"
-                placeholder="e.g. 123456789012345678"
-                value={discordRoleId}
-                onChange={(e) => setDiscordRoleId(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                If provided, Discord users with this Role ID will automatically inherit this group upon login.
-              </p>
-            </div>
+            <DiscordResourcePicker
+              id="discord-role-id"
+              label="Discord Role ID (Optional Auto-Sync)"
+              description="If provided, Discord users with this Role ID will automatically inherit this group upon login."
+              kind="role"
+              value={discordRoleId}
+              onChange={(val) => setDiscordRoleId(String(val ?? ""))}
+            />
 
             <div className="pt-2">
               <h4 className="text-sm font-semibold mb-3">Group Permission Matrix</h4>

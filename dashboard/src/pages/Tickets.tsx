@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   RefreshIcon,
   Link01Icon,
@@ -14,6 +14,9 @@ import {
   Tick01Icon,
   Attachment01Icon,
   Image01Icon,
+  Ticket01Icon,
+  Search01Icon,
+  FilterIcon,
 } from "@hugeicons/core-free-icons";
 import { api, GuildResources } from "@/api/client";
 import { Icon } from "@/components/icon";
@@ -23,6 +26,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Sheet,
@@ -40,6 +51,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getByPath } from "@/lib/config-utils";
 import { formatUptime } from "@/api/client";
 import {
   useRealtimeStream,
@@ -124,6 +136,68 @@ export default function Tickets() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // Department system enablement state
+  const [departmentsEnabled, setDepartmentsEnabled] = useState<boolean>(true);
+
+  useEffect(() => {
+    try {
+      api.getConfigJson("supportbot")
+        .then((res) => {
+          if (res && res.data && typeof res.data === "object") {
+            const deptVal = getByPath(res.data, "Ticket.DepartmentSystem.Enabled");
+            if (typeof deptVal === "boolean") {
+              setDepartmentsEnabled(deptVal);
+            }
+          }
+        })
+        .catch(() => {});
+    } catch {
+      // Fallback silently if config fetch fails
+    }
+  }, []);
+
+  // Filter state
+  const [selectedDeptFilter, setSelectedDeptFilter] = useState<string>("all");
+  const [selectedPriorityFilter, setSelectedPriorityFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+
+  const availableDepartments = useMemo(() => {
+    const deptsSet = new Set<string>();
+    if (Array.isArray(list)) {
+      list.forEach((ticket) => {
+        if (ticket && ticket.department && typeof ticket.department === "string") {
+          const d = ticket.department.trim().toLowerCase();
+          if (d) deptsSet.add(d);
+        }
+      });
+    }
+    return Array.from(deptsSet).sort();
+  }, [list]);
+
+  const filteredTickets = useMemo(() => {
+    if (!Array.isArray(list)) return [];
+    return list.filter((ticket) => {
+      if (!ticket) return false;
+      if (departmentsEnabled && selectedDeptFilter !== "all" && ticket.department?.toLowerCase() !== selectedDeptFilter.toLowerCase()) {
+        return false;
+      }
+      if (selectedPriorityFilter !== "all" && ticket.priority?.toLowerCase() !== selectedPriorityFilter.toLowerCase()) {
+        return false;
+      }
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const subjectMatch = ticket.subject?.toLowerCase().includes(q);
+        const idMatch = ticket.ticket_id?.toLowerCase().includes(q);
+        const userMatch = ticket.user_id?.toLowerCase().includes(q);
+        const deptMatch = departmentsEnabled && ticket.department?.toLowerCase().includes(q);
+        if (!subjectMatch && !idMatch && !userMatch && !deptMatch) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [list, departmentsEnabled, selectedDeptFilter, selectedPriorityFilter, searchQuery]);
+
   // Live Chat state
   const [activeTicket, setActiveTicket] = useState<TicketItem | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
@@ -146,6 +220,37 @@ export default function Tickets() {
   const [ticketToClose, setTicketToClose] = useState<TicketItem | null>(null);
   const [closeReason, setCloseReason] = useState("");
   const [closingTicketId, setClosingTicketId] = useState<string | null>(null);
+
+  // Create Direct Ticket State
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [createDept, setCreateDept] = useState("general");
+  const [createSubject, setCreateSubject] = useState("");
+  const [createUserId, setCreateUserId] = useState("");
+  const [creating, setCreating] = useState(false);
+
+  const handleCreateTicket = async () => {
+    if (!createSubject.trim()) {
+      toast.error("Please enter a subject or reason for the ticket.");
+      return;
+    }
+    setCreating(true);
+    try {
+      const res = await api.createTicket({
+        department: createDept,
+        subject: createSubject.trim(),
+        userId: createUserId.trim() || undefined,
+      });
+      toast.success(res.message || "Ticket opened successfully!");
+      setCreateModalOpen(false);
+      setCreateSubject("");
+      setCreateUserId("");
+      void loadList();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to open ticket.");
+    } finally {
+      setCreating(false);
+    }
+  };
 
   const promptCloseTicket = (ticket: TicketItem) => {
     setTicketToClose(ticket);
@@ -1111,10 +1216,87 @@ export default function Tickets() {
             Manage open support tickets & reply live to Discord channels from the web dashboard.
           </p>
         </div>
-        <Button onClick={() => void loadList()} disabled={loading} variant="outline" size="sm">
-          <Icon icon={RefreshIcon} size={16} className={loading ? "animate-spin mr-2" : "mr-2"} />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={() => setCreateModalOpen(true)}
+            className="gap-2 bg-primary font-semibold text-xs h-9"
+          >
+            <Icon icon={Ticket01Icon} size={15} /> Open Ticket
+          </Button>
+          <Button onClick={() => void loadList()} disabled={loading} variant="outline" size="sm">
+            <Icon icon={RefreshIcon} size={16} className={loading ? "animate-spin mr-2" : "mr-2"} />
+            Refresh
+          </Button>
+        </div>
+      </div>
+
+      {/* FILTER & SEARCH BAR */}
+      <div className="flex flex-col md:flex-row items-center justify-between gap-3 bg-card/60 p-3.5 rounded-xl border border-border/80 shadow-sm">
+        <div className="relative w-full md:w-80">
+          <Icon
+            icon={Search01Icon}
+            size={15}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+          />
+          <Input
+            placeholder="Search tickets by ID, user, subject..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 text-xs h-9 bg-secondary/30 border-border"
+          />
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto justify-end">
+          {departmentsEnabled && (
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className="text-xs font-semibold text-muted-foreground">Department:</span>
+              <Select value={selectedDeptFilter} onValueChange={setSelectedDeptFilter}>
+                <SelectTrigger className="text-xs h-9 w-[160px] bg-secondary/30 border-border capitalize">
+                  <SelectValue placeholder="All Departments" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Departments</SelectItem>
+                  {availableDepartments.map((dept) => (
+                    <SelectItem key={dept} value={dept} className="capitalize">
+                      {dept}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="text-xs font-semibold text-muted-foreground">Priority:</span>
+            <Select value={selectedPriorityFilter} onValueChange={setSelectedPriorityFilter}>
+              <SelectTrigger className="text-xs h-9 w-[140px] bg-secondary/30 border-border capitalize">
+                <SelectValue placeholder="All Priorities" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Priorities</SelectItem>
+                <SelectItem value="low">Low</SelectItem>
+                <SelectItem value="medium">Medium / Normal</SelectItem>
+                <SelectItem value="high">High</SelectItem>
+                <SelectItem value="urgent">Urgent</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {(selectedDeptFilter !== "all" || selectedPriorityFilter !== "all" || searchQuery.trim()) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSelectedDeptFilter("all");
+                setSelectedPriorityFilter("all");
+                setSearchQuery("");
+              }}
+              className="h-9 text-xs text-muted-foreground hover:text-foreground px-2"
+            >
+              Reset
+            </Button>
+          )}
+        </div>
       </div>
 
       <Card className="border-border bg-card">
@@ -1131,13 +1313,27 @@ export default function Tickets() {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             </div>
-          ) : list.length === 0 ? (
-            <div className="p-12 text-center text-muted-foreground">
-              No open tickets at the moment!
+          ) : filteredTickets.length === 0 ? (
+            <div className="p-12 text-center text-muted-foreground space-y-2">
+              <p>No open tickets found matching your filter criteria.</p>
+              {(selectedDeptFilter !== "all" || selectedPriorityFilter !== "all" || searchQuery.trim()) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedDeptFilter("all");
+                    setSelectedPriorityFilter("all");
+                    setSearchQuery("");
+                  }}
+                  className="text-xs mt-2"
+                >
+                  Clear Filters
+                </Button>
+              )}
             </div>
           ) : (
             <div className="divide-y divide-border">
-              {list.map((ticket) => (
+              {filteredTickets.map((ticket) => (
                 <div
                   key={ticket.ticket_id}
                   className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 hover:bg-secondary/10 transition-colors gap-4"
@@ -1150,9 +1346,11 @@ export default function Tickets() {
                       <span className="text-xs font-mono text-muted-foreground">
                         #{ticket.ticket_id}
                       </span>
-                      <Badge variant="outline" className="text-xs capitalize">
-                        {ticket.department}
-                      </Badge>
+                      {departmentsEnabled && ticket.department && (
+                        <Badge variant="outline" className="text-xs capitalize">
+                          {ticket.department}
+                        </Badge>
+                      )}
                       <Badge
                         variant={
                           ticket.priority === "high"
@@ -1397,6 +1595,86 @@ export default function Tickets() {
                 <Icon icon={Cancel01Icon} size={14} className="mr-1.5" />
               )}
               Confirm Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Ticket Modal */}
+      <Dialog open={createModalOpen} onOpenChange={setCreateModalOpen}>
+        <DialogContent className="sm:max-w-[450px]">
+          <DialogHeader>
+            <DialogTitle className="text-base flex items-center gap-2">
+              <Icon icon={Ticket01Icon} size={18} className="text-primary" />
+              Open Direct Ticket
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Select a support department to create a new ticket channel in Discord immediately.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Department</Label>
+              <Select value={createDept} onValueChange={setCreateDept}>
+                <SelectTrigger className="text-xs border-border bg-secondary/30">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="general">🎫 General Support</SelectItem>
+                  <SelectItem value="purchase">💳 Purchase & Billing Support</SelectItem>
+                  <SelectItem value="reports">🚨 Player Report</SelectItem>
+                  <SelectItem value="appeals">⚖️ Ban Appeals</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Ticket Subject / Reason</Label>
+              <Input
+                value={createSubject}
+                onChange={(e) => setCreateSubject(e.target.value)}
+                placeholder="e.g. Assistance with server permissions"
+                className="text-xs border-border bg-secondary/30"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Discord User ID (Optional)</Label>
+              <Input
+                value={createUserId}
+                onChange={(e) => setCreateUserId(e.target.value)}
+                placeholder="e.g. 123456789012345678 (Leave blank for yourself)"
+                className="text-xs font-mono border-border bg-secondary/30"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                If specified, the ticket channel will be created for this user.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCreateModalOpen(false)}
+              disabled={creating}
+              className="text-xs"
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleCreateTicket}
+              disabled={creating || !createSubject.trim()}
+              className="gap-1.5 text-xs bg-primary font-semibold"
+            >
+              {creating ? (
+                <Icon icon={RefreshIcon} size={14} className="animate-spin" />
+              ) : (
+                <Icon icon={Ticket01Icon} size={14} />
+              )}
+              {creating ? "Opening Ticket..." : "Open Ticket"}
             </Button>
           </DialogFooter>
         </DialogContent>
