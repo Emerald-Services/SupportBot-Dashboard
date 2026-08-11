@@ -138,6 +138,9 @@ export default function Tickets() {
 
   // Department system enablement state
   const [departmentsEnabled, setDepartmentsEnabled] = useState<boolean>(true);
+  const [configuredDepartments, setConfiguredDepartments] = useState<
+    { id: string; name: string; emoji?: string }[]
+  >([]);
 
   useEffect(() => {
     try {
@@ -147,6 +150,18 @@ export default function Tickets() {
             const deptVal = getByPath(res.data, "Ticket.DepartmentSystem.Enabled");
             if (typeof deptVal === "boolean") {
               setDepartmentsEnabled(deptVal);
+            }
+            const deptsObj = getByPath(res.data, "Ticket.DepartmentSystem.Departments");
+            if (deptsObj && typeof deptsObj === "object") {
+              const deptsList = Object.entries(deptsObj).map(([key, val]: [string, any]) => ({
+                id: key,
+                name: val && typeof val === "object" && val.Name ? (val.Name as string) : key,
+                emoji: val && typeof val === "object" && val.Emoji ? (val.Emoji as string) : "🎫",
+              }));
+              if (deptsList.length > 0) {
+                setConfiguredDepartments(deptsList);
+                setCreateDept(deptsList[0].id);
+              }
             }
           }
         })
@@ -236,7 +251,7 @@ export default function Tickets() {
     setCreating(true);
     try {
       const res = await api.createTicket({
-        department: createDept,
+        department: departmentsEnabled ? createDept : "general",
         subject: createSubject.trim(),
         userId: createUserId.trim() || undefined,
       });
@@ -1435,7 +1450,7 @@ export default function Tickets() {
                   <Badge variant="outline" className="font-mono text-xs shrink-0">
                     #{activeTicket?.ticket_id}
                   </Badge>
-                  {activeTicket?.department && (
+                  {departmentsEnabled && activeTicket?.department && (
                     <Badge variant="secondary" className="text-xs capitalize shrink-0">
                       {activeTicket.department}
                     </Badge>
@@ -1609,25 +1624,38 @@ export default function Tickets() {
               Open Direct Ticket
             </DialogTitle>
             <DialogDescription className="text-xs">
-              Select a support department to create a new ticket channel in Discord immediately.
+              {departmentsEnabled
+                ? "Select a support department to create a new ticket channel in Discord immediately."
+                : "Create a new ticket channel in Discord immediately."}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Department</Label>
-              <Select value={createDept} onValueChange={setCreateDept}>
-                <SelectTrigger className="text-xs border-border bg-secondary/30">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="general">🎫 General Support</SelectItem>
-                  <SelectItem value="purchase">💳 Purchase & Billing Support</SelectItem>
-                  <SelectItem value="reports">🚨 Player Report</SelectItem>
-                  <SelectItem value="appeals">⚖️ Ban Appeals</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {departmentsEnabled && (
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Department</Label>
+                <Select value={createDept} onValueChange={setCreateDept}>
+                  <SelectTrigger className="text-xs border-border bg-secondary/30">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(configuredDepartments.length > 0
+                      ? configuredDepartments
+                      : [
+                          { id: "general", name: "General Support", emoji: "🎫" },
+                          { id: "purchase", name: "Purchase & Billing Support", emoji: "💳" },
+                          { id: "reports", name: "Player Report", emoji: "🚨" },
+                          { id: "appeals", name: "Ban Appeals", emoji: "⚖️" },
+                        ]
+                    ).map((dept) => (
+                      <SelectItem key={dept.id} value={dept.id}>
+                        {dept.emoji ? `${dept.emoji} ` : ""}{dept.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold">Ticket Subject / Reason</Label>
