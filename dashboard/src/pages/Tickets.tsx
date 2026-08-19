@@ -147,9 +147,10 @@ export default function Tickets() {
       api.getConfigJson("supportbot")
         .then((res) => {
           if (res && res.data && typeof res.data === "object") {
+            const ticketType = getByPath(res.data, "Ticket.TicketType");
             const deptVal = getByPath(res.data, "Ticket.DepartmentSystem.Enabled");
             if (typeof deptVal === "boolean") {
-              setDepartmentsEnabled(deptVal);
+              setDepartmentsEnabled(ticketType !== "threads" && deptVal);
             }
             const deptsObj = getByPath(res.data, "Ticket.DepartmentSystem.Departments");
             if (deptsObj && typeof deptsObj === "object") {
@@ -160,7 +161,10 @@ export default function Tickets() {
               }));
               if (deptsList.length > 0) {
                 setConfiguredDepartments(deptsList);
-                setCreateDept(deptsList[0].id);
+                setCreateDept((prev) => {
+                  const exists = deptsList.some((d) => d.id === prev);
+                  return exists ? prev : deptsList[0].id;
+                });
               }
             }
           }
@@ -251,7 +255,7 @@ export default function Tickets() {
     setCreating(true);
     try {
       const res = await api.createTicket({
-        department: departmentsEnabled ? createDept : "general",
+        department: departmentsEnabled ? createDept : undefined,
         subject: createSubject.trim(),
         userId: createUserId.trim() || undefined,
       });
@@ -311,6 +315,16 @@ export default function Tickets() {
       if (res.data) {
         setGuildId(res.data.guildId);
         setList(res.data.tickets.sort((a, b) => b.created_at - a.created_at));
+        if (typeof res.data.departmentsEnabled === "boolean") {
+          setDepartmentsEnabled(res.data.departmentsEnabled);
+        }
+        if (Array.isArray(res.data.configuredDepartments) && res.data.configuredDepartments.length > 0) {
+          setConfiguredDepartments(res.data.configuredDepartments);
+          setCreateDept((prev) => {
+            const exists = res.data?.configuredDepartments?.some((d) => d.id === prev);
+            return exists ? prev : res.data!.configuredDepartments![0].id;
+          });
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load open tickets");

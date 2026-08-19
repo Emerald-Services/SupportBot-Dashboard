@@ -338,6 +338,8 @@ export const api = {
     request<
       ApiResponse<{
         guildId: string;
+        departmentsEnabled?: boolean;
+        configuredDepartments?: { id: string; name: string; emoji?: string }[];
         tickets: {
           ticket_id: string;
           user_id: string;
